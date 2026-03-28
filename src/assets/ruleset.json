@@ -4,35 +4,62 @@
             "name": "magic-circle-sc",
             "category": "ring",
             "consume": [0],
-            "produce": 6,
+            "produce": [
+                {"type": "sc"},
+                {"type":"sc"},
+                {"type": "sc"},
+                {"type":"sc"},
+                {"type": "sc"},
+                {"type":"sc"}
+            ],
             "weight": 1
         },
         {
             "name": "flat",
             "category": "insert",
             "consume": [0],
-            "produce": 1,
+            "produce": [
+                {"type": "sc"}
+            ],
             "weight": 2
         },
         {
             "name": "increase",
             "category": "insert",
             "consume": [0],
-            "produce": 2,
+            "produce": [
+                {"type": "sc"},
+                {"type": "sc"}
+            ],
             "weight": 3
         },
         {
             "name": "decrease-left",
             "category": "insert",
             "consume": [0, 1],
-            "produce": 1,
+            "produce": [
+                {"type": "sc"}
+            ],
             "weight": 1
         },
         {
             "name": "decrease-right",
             "category": "insert",
             "consume": [0, -1],
-            "produce": 1,
+            "produce": [
+                {"type": "sc"}
+            ],
+            "weight": 1
+        },
+        {
+            "name": "hole",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {"type": "sc"},
+                {"type": "hole", "size": 2},
+                {"type": "sc"}
+            ],
             "weight": 1
         }
     ],

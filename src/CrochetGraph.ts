@@ -1,10 +1,12 @@
 import ruleset from "./assets/ruleset.json";
 
+type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring";
+
 class StitchType {
-    type: "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring" = "ch";
+    type: Stitch = "ch";
     category: "ring" | "insert" | "terminal";
 
-    constructor(type: "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring") {
+    constructor(type: Stitch) {
         this.type = type;
         switch(this.type) {
             case "ss":
@@ -22,6 +24,7 @@ class StitchType {
             }
             case "ring": {
                 this.category = "ring"
+                break;
             }
         }
     }
@@ -97,6 +100,30 @@ class Vertex {
         this.layer = layer;
         this.type = type;
     }
+
+    serialize(edges: Edge[]) {
+        return `${this.type.type}${this.labelSymbol(edges)}`;
+    }
+
+    protected labelSymbol(edges: Edge[]) {
+        let symbol = "";
+        const insertedEdges = edges.filter( e => e.type == "insert" && e.from == this);
+        const insertingEdges = edges.filter( e => e.type == "insert" && e.to == this);
+        const parents = insertedEdges.map( e => e.to);
+
+        if(insertedEdges.length > 1) {
+            // TODO: no support for specific dec placement yet
+            symbol += `${insertedEdges.length}tog`;
+        }
+        else{
+            if(insertingEdges.length > 1)
+                symbol += `.${this.id}`;
+            if(edges.filter( e => e.type == "insert" && e.to == parents[0]).length > 1) {
+                symbol += `@${parents[0].id}`;
+            }
+        }
+        return symbol;
+    }
 }
 
 class Hole extends Vertex {
@@ -105,6 +132,10 @@ class Hole extends Vertex {
     constructor(id: string, layer: number, size: number) {
         super(id, StitchTypes.HL, layer);
         this.size = size;
+    }
+
+    serialize(edges: Edge[]) {
+        return `${this.size}ch${this.labelSymbol(edges)}`;
     }
 }
 
@@ -185,10 +216,17 @@ export class Pattern {
                             parents.push(p)
                     }
 
-                    for(let k=0;k<r.produce;k++) {
-                        const stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), StitchTypes.SC, this.currentRow);
+                    for(let k=0;k<r.produce.length;k++) {
+                        const produce = r.produce[k];
+                        let stitch: Vertex;
+                        if(produce.type == "hole" && produce.size !== undefined)
+                            stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.size);
+                        else
+                            stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
                         this.addVertex(stitch);
-                        newIDs.push(stitch.id);
+                        if(stitch.type.category == "insert")
+                            newIDs.push(stitch.id);
+
                         if(previousID)
                             this.addEdge(stitch.id, previousID, "prev");
                         for(const p of parents)
@@ -201,55 +239,48 @@ export class Pattern {
         return newIDs;
     }
 
+    addHole(hole: Hole, idBefore: string, idAfter: string) {
+        const before = this.vertices.get(idBefore);
+        const after = this.vertices.get(idAfter);
+        if(before && after){
+            this.addVertex(hole);
+            const index = this.edges.findIndex( e => (e.from == before && e.to == after) || (e.to == before && e.from == after));
+            if(index >= 0)
+                this.edges.splice(index);
+            let prev = before.id;
+            for(let i=0; i<hole.size; i++) {
+                const ch = new Vertex(hole.id+String(i), StitchTypes.CH, hole.layer);
+                this.addVertex(ch);
+                this.addEdge(ch.id, prev, "prev");
+                this.addEdge(ch.id, hole.id, "surround")
+                prev = ch.id;
+            }
+            this.addEdge(after.id, prev, "prev");
+        }
+    }
+
     serialize() {
         let currentStitch = this.vertices.get(this.firstStitchID);
         let pattern: string[] =  [];
         if(currentStitch){
             console.log("###########################");
             console.log("current stitch: ", currentStitch);
-            //let connectedEdge = this.edges.find( e => e.type == "prev" && e.to == currentStitch);
-
-            // for determining decreases
-            // parents
-            let insertedEdges = this.edges.filter( e => e.type == "insert" && e.from == currentStitch);
-
-            // children
-            let insertingEdges = this.edges.filter( e => e.type == "insert" && e.to == currentStitch);
-            //console.log("connected Edge: ", connectedEdge);
 
             let layer = currentStitch.layer;
             let layerString: string[] = [];
             let connectedEdge: Edge | undefined = new Edge(currentStitch, currentStitch, "prev", Modifiers.NO);
+
             while(connectedEdge) {
-                // end of layer
                 currentStitch = connectedEdge.from;
                 connectedEdge = this.edges.find(e => e.type == "prev" && e.to == currentStitch);
-                insertedEdges = this.edges.filter( e => e.type == "insert" && e.from == currentStitch);
-                insertingEdges = this.edges.filter( e => e.type == "insert" && e.to == currentStitch);
-                const parents = insertedEdges.map( e => e.to);
-                console.log("connected Edge: ", connectedEdge);
-                console.log("inserted edges: ", insertedEdges);
-
+                
                 if(layer != currentStitch.layer) {
                     pattern.push(layerString.join(", "));
                     layerString = []
                 }
                 layer = currentStitch.layer;
 
-                
-                if(insertedEdges.length > 1) {
-                    // no support for specific dec placement yet
-                    layerString.push(`${currentStitch.type.type}${insertedEdges.length}tog`)
-                }
-                else{
-                    let symbol = `${currentStitch.type.type}`;
-                    if(insertingEdges.length > 1)
-                        symbol += `.${currentStitch.id}`;
-                    if(this.edges.filter( e => e.type == "insert" && e.to == parents[0]).length > 1) {
-                        symbol += `@${parents[0].id}`;
-                    }
-                    layerString.push(symbol);
-                }
+                layerString.push(currentStitch.serialize(this.edges));
             }
             pattern.push(layerString.join(", "))
         }
@@ -257,19 +288,6 @@ export class Pattern {
     }
 }
 
-
-class ParadeStitch {
-    symbol: string;
-    label: string;
-    children: string[] = [];
-    parents: string[];
-
-    constructor(symbol: string, label: string, parents: string[]) {
-        this.symbol = symbol;
-        this.label = label;
-        this.parents = parents;
-    }
-}
 
 
 function selectWeightedRandom(rules: {weight: number}[]) {

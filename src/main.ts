@@ -9,8 +9,9 @@ pattern.innerText = circle.formatToGrammar();
 
 const pat = new CG.Pattern();
 //let h = pat.startChain(5);
-const l = pat.addRow([pat.firstStitchID]);
+let l = pat.addRow([pat.firstStitchID]);
 console.log(l);
-pat.addRow(l);
+for(let i=0; i<2; i++)
+    l = pat.addRow(l);
 console.log(pat);
 pattern.innerText = pat.serialize();
