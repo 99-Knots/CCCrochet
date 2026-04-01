@@ -6,11 +6,11 @@
             "consume": [0],
             "produce": [
                 {"type": "sc"},
-                {"type":"sc"},
                 {"type": "sc"},
-                {"type":"sc"},
                 {"type": "sc"},
-                {"type":"sc"}
+                {"type": "sc"},
+                {"type": "sc"},
+                {"type": "sc"}
             ],
             "weight": 1
         },

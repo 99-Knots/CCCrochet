@@ -115,13 +115,11 @@ class Vertex {
             // TODO: no support for specific dec placement yet
             symbol += `${insertedEdges.length}tog`;
         }
-        else{
             if(insertingEdges.length > 1)
                 symbol += `.${this.id}`;
             if(edges.filter( e => e.type == "insert" && e.to == parents[0]).length > 1) {
                 symbol += `@${parents[0].id}`;
             }
-        }
         return symbol;
     }
 }
