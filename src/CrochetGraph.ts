@@ -238,6 +238,7 @@ export class Pattern {
     }
 
     addHole(hole: Hole, idBefore: string, idAfter: string) {
+        // TODO: possibly not needed because chains only needed for rendering?
         const before = this.vertices.get(idBefore);
         const after = this.vertices.get(idAfter);
         if(before && after){
@@ -261,9 +262,6 @@ export class Pattern {
         let currentStitch = this.vertices.get(this.firstStitchID);
         let pattern: string[] =  [];
         if(currentStitch){
-            console.log("###########################");
-            console.log("current stitch: ", currentStitch);
-
             let layer = currentStitch.layer;
             let layerString: string[] = [];
             let connectedEdge: Edge | undefined = new Edge(currentStitch, currentStitch, "prev", Modifiers.NO);

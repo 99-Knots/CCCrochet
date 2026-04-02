@@ -3,14 +3,16 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 
 interface Node {
-    name: string;
+    name: string,
+    _gvid: number,
     pos: [number, number, number]
 }
 
 interface Edge {
-    tail: string;
-    head: string;
-    color: string;
+    tail: number,
+    head: number,
+    color: string,
+    width: number,
 }
 
 
@@ -22,11 +24,13 @@ export class GraphRenderer {
     private container: HTMLElement;
     private light: THREE.DirectionalLight;
     sizeFactor: number;
+    renderYarnColor?: THREE.ColorRepresentation | null;
 
-    private nodeMap = new Map<string, THREE.Mesh>();
+    private nodeMap = new Map<number, THREE.Mesh>();
+    private materialMap = new Map<THREE.ColorRepresentation, THREE.MeshStandardMaterial>();
 
     constructor(container: HTMLElement) {
-        this.sizeFactor = 0.4;
+        this.sizeFactor = 0.1;
         this.container = container;
 
         this.scene = new THREE.Scene();
@@ -36,10 +40,9 @@ export class GraphRenderer {
             0.1,
             1000
         );
-        this.camera.position.set(0, 0, 50);
+        this.camera.position.set(0, 7, 7);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.camera.position.z = 7;
 
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -59,7 +62,7 @@ export class GraphRenderer {
 
     renderGraph(graph: { nodes: Node[], edges: Edge[] }) {
         this.clearScene();
-
+        console.log(graph);
         this.createNodes(graph.nodes);
         this.createEdges(graph.edges);
     }
@@ -77,12 +80,13 @@ export class GraphRenderer {
         const geometry = new THREE.SphereGeometry(this.sizeFactor);
 
         for (const n of nodes) {
-            const material = new THREE.MeshStandardMaterial();
+            const material = this.getMaterial(this.renderYarnColor ?? "white");;
             const mesh = new THREE.Mesh(geometry, material);
-
             mesh.position.set(n.pos[0], n.pos[1], n.pos[2]);
             this.scene.add(mesh);
-            this.nodeMap.set(n.name, mesh);
+            this.nodeMap.set(n._gvid, mesh);
+            if(n._gvid == 46)
+                console.log(n)
         }
     }
 
@@ -94,10 +98,13 @@ export class GraphRenderer {
             if (!a || !b) continue;
             const dist = a.position.distanceTo(b.position);
 
-            const material = new THREE.MeshStandardMaterial();
-            material.color.set(e.color);
+            const material = this.getMaterial(this.renderYarnColor ?? e.color);
             const mesh = new THREE.Mesh(geometry, material);
-            mesh.scale.set(1, dist, 1);
+
+            // resize
+            mesh.scale.set(e.width, dist, e.width);
+            a.scale.max(new THREE.Vector3(e.width, e.width, e.width));
+            b.scale.max(new THREE.Vector3(e.width, e.width, e.width));
 
             const midpoint = new THREE.Vector3().addVectors(a.position, b.position).divideScalar(2);
             mesh.position.copy(midpoint);
@@ -106,6 +113,17 @@ export class GraphRenderer {
             const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
             mesh.quaternion.copy(quaternion);
             this.scene.add(mesh);
+        }
+    }
+
+    private getMaterial(color: THREE.ColorRepresentation) {
+        var mapMat = this.materialMap.get(color)
+        if(mapMat)
+            return mapMat;
+        else {
+            var material = new THREE.MeshStandardMaterial({color: color});
+            this.materialMap.set(color, material);
+            return material;
         }
     }
 
