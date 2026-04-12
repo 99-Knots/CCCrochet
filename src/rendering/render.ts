@@ -1,19 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { Vertex, Edge } from "../Stitches";
 
 
-interface Node {
-    name: string,
-    _gvid: number,
-    pos: [number, number, number]
-}
-
-interface Edge {
-    tail: number,
-    head: number,
-    color: string,
-    width: number,
-}
 
 
 export class GraphRenderer {
@@ -24,9 +13,13 @@ export class GraphRenderer {
     private container: HTMLElement;
     private light: THREE.DirectionalLight;
     sizeFactor: number;
-    renderYarnColor?: THREE.ColorRepresentation | null;
+    private _renderYarnColor?: THREE.ColorRepresentation | null;
 
-    private nodeMap = new Map<number, THREE.Mesh>();
+    set renderYarnColor(val: THREE.ColorRepresentation | null) {
+        this._renderYarnColor = val;
+    }
+
+    private nodeMap = new Map<string, THREE.Mesh>();
     private materialMap = new Map<THREE.ColorRepresentation, THREE.MeshStandardMaterial>();
 
     constructor(container: HTMLElement) {
@@ -60,9 +53,8 @@ export class GraphRenderer {
         this.renderer.setAnimationLoop( this.animate )
     }
 
-    renderGraph(graph: { nodes: Node[], edges: Edge[] }) {
+    renderGraph(graph: { nodes: Vertex[], edges: Edge[] }) {
         this.clearScene();
-        console.log(graph);
         this.createNodes(graph.nodes);
         this.createEdges(graph.edges);
     }
@@ -76,35 +68,35 @@ export class GraphRenderer {
         this.nodeMap.clear();
     }
 
-    private createNodes(nodes: Node[]) {
+    private createNodes(nodes: Vertex[]) {
         const geometry = new THREE.SphereGeometry(this.sizeFactor);
 
         for (const n of nodes) {
-            const material = this.getMaterial(this.renderYarnColor ?? "white");;
+            const material = this.getMaterial(this._renderYarnColor ?? "white");;
             const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(n.pos[0], n.pos[1], n.pos[2]);
+            mesh.position.set(n.x??0, n.y??0, n.z??0);
             this.scene.add(mesh);
-            this.nodeMap.set(n._gvid, mesh);
-            if(n._gvid == 46)
-                console.log(n)
+            this.nodeMap.set(n.id, mesh);
         }
     }
 
     private createEdges(edges: Edge[]) {
         const geometry = new THREE.CylinderGeometry(this.sizeFactor, this.sizeFactor, 1);
         for (const e of edges) {
-            const a = this.nodeMap.get(e.tail);
-            const b = this.nodeMap.get(e.head);
+            if(!(e.type == "insert" || e.type == "prev"))
+                continue;
+            const a = this.nodeMap.get(e.target.id);
+            const b = this.nodeMap.get(e.source.id);
             if (!a || !b) continue;
             const dist = a.position.distanceTo(b.position);
 
-            const material = this.getMaterial(this.renderYarnColor ?? e.color);
+            const material = this.getMaterial(this._renderYarnColor ?? "white");
             const mesh = new THREE.Mesh(geometry, material);
 
             // resize
-            mesh.scale.set(e.width, dist, e.width);
-            a.scale.max(new THREE.Vector3(e.width, e.width, e.width));
-            b.scale.max(new THREE.Vector3(e.width, e.width, e.width));
+            mesh.scale.set(4, dist, 4);
+            a.scale.max(new THREE.Vector3(4, 4, 4));
+            b.scale.max(new THREE.Vector3(4, 4, 4));
 
             const midpoint = new THREE.Vector3().addVectors(a.position, b.position).divideScalar(2);
             mesh.position.copy(midpoint);
@@ -128,7 +120,6 @@ export class GraphRenderer {
     }
 
     private animate = () => {
-        requestAnimationFrame(this.animate);
         this.controls.update();
         this.light.position.copy(this.camera.position);
         this.renderer.render(this.scene, this.camera);

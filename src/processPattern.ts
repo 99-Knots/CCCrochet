@@ -1,6 +1,5 @@
 import { processText } from './rendering/parse64.js';
 import { loadGraphModule } from './rendering/graph.ts';
-import { GraphRenderer } from './rendering/render.ts';
 
 
 
@@ -68,16 +67,12 @@ function transformJsonWithPos(
     return {nodes: nodes, edges: edges};
 }
 
-export async function processPatternToGraph(patternString: string, container: HTMLElement) {
+export async function processPatternToGraph(patternString: string) {
     var json0 = "";
     var dot_simple = "";
     [json0, dot_simple] = processText(patternString, json0);
     var json1 = await performLayout(dot_simple);
     const parsed = JSON.parse(json0, (key, value) => key=="penwidth" ? Number(value): value);
     var json2 = transformJsonWithPos(parsed, json1);
-
-    const renderer = new GraphRenderer(container);
-    renderer.renderYarnColor = "white";
-
-    renderer.renderGraph(json2);
+    return json2;
 }

@@ -1,141 +1,7 @@
 import ruleset from "./assets/ruleset.json";
+import {forceSimulation, forceLink, forceManyBody, forceCollide, forceCenter} from "d3-force-3d";
 
-type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring";
-
-class StitchType {
-    type: Stitch = "ch";
-    category: "ring" | "insert" | "terminal";
-
-    constructor(type: Stitch) {
-        this.type = type;
-        switch(this.type) {
-            case "ss":
-            case "ch": {
-                this.category = "terminal";
-                break;
-            }
-            case "sc":
-            case "hdc":
-            case "dc":
-            case "tr":
-            case "hole": {
-                this.category = "insert";
-                break;
-            }
-            case "ring": {
-                this.category = "ring"
-                break;
-            }
-        }
-    }
-}
-
-export const StitchTypes = {
-    CH: new StitchType("ch"),
-    SLST: new StitchType("ss"),
-    SC: new StitchType("sc"),
-    HDC: new StitchType("hdc"),
-    DC: new StitchType("dc"),
-    TR: new StitchType("tr"),
-    HL: new StitchType("hole"),
-    MC: new StitchType("ring")
-}
-
-
-class Modifier {
-    private type: "p" | "l" | "" = "";
-    private position: "f" | "b" = "f";
-
-    constructor(type?: "p" | "l" | "", position?: "f" | "b") {
-        if(type)
-            this.type = type;
-        if(position && type !== "") 
-            this.position = position;
-    }
-
-    applyToStitch(stitch: StitchType) {
-        switch(this.type) {
-            case "p":
-                return this.position + this.type + stitch;
-            case "l":
-                return stitch + this.position + this.type;
-            default:
-                return stitch;
-        }
-    }
-}
-
-export const Modifiers = {
-    BL: new Modifier("l", "b"),
-    FL: new Modifier("l"),
-    BP: new Modifier("p", "b"),
-    FP: new Modifier("p"),
-    NO: new Modifier
-};
-
-
-type EdgeType = "prev" | "slst" | "insert" | "surround";
-
-class Edge {
-    to: Vertex;
-    from: Vertex;
-    type: EdgeType;
-    mod: Modifier;
-
-    constructor(from: Vertex, to: Vertex, type: EdgeType, mod: Modifier) {
-        this.to = to;
-        this.from = from;
-        this.type = type;
-        this.mod = mod;
-    }
-}
-
-class Vertex {
-    id: string;
-    layer: number;
-    type: StitchType;
-
-    constructor(id: string, type: StitchType, layer: number) {
-        this.id = "A"+id;
-        this.layer = layer;
-        this.type = type;
-    }
-
-    serialize(edges: Edge[]) {
-        return `${this.type.type}${this.labelSymbol(edges)}`;
-    }
-
-    protected labelSymbol(edges: Edge[]) {
-        let symbol = "";
-        const insertedEdges = edges.filter( e => e.type == "insert" && e.from == this);
-        const insertingEdges = edges.filter( e => e.type == "insert" && e.to == this);
-        const parents = insertedEdges.map( e => e.to);
-
-        if(insertedEdges.length > 1) {
-            // TODO: no support for specific dec placement yet
-            symbol += `${insertedEdges.length}tog`;
-        }
-            if(insertingEdges.length > 1)
-                symbol += `.${this.id}`;
-            if(edges.filter( e => e.type == "insert" && e.to == parents[0]).length > 1) {
-                symbol += `@${parents[0].id}`;
-            }
-        return symbol;
-    }
-}
-
-class Hole extends Vertex {
-    size: number;
-
-    constructor(id: string, layer: number, size: number) {
-        super(id, StitchTypes.HL, layer);
-        this.size = size;
-    }
-
-    serialize(edges: Edge[]) {
-        return `${this.size}ch${this.labelSymbol(edges)}`;
-    }
-}
+import {Edge, Vertex, Hole, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 
 export class Pattern {
     edges: Edge[] = [];
@@ -187,7 +53,7 @@ export class Pattern {
         // incorrect order
         const IDs: Vertex[] = Array.from(this.vertices.values()).filter(v => v.layer === layer);
         IDs.sort((a, b) => {
-                const edge = this.edges.find(e => e.from.id === a.id && e.to.id === b.id && e.type === "prev");
+                const edge = this.edges.find(e => e.source.id === a.id && e.target.id === b.id && e.type === "prev");
                 return edge ? 1 : -1;
             });
         return IDs;
@@ -198,15 +64,18 @@ export class Pattern {
         const newIDs: string[] = [];
         let previousID: string = previousRowIDs[previousRowIDs.length-1];
 
+        // iterate over every stitch in prev row
         for(let i=0; i<previousRowIDs.length; i++) {
             const currentPrev = this.vertices.get(previousRowIDs[i]);
 
             if(currentPrev) {
+                // get all rules that can be applied to the current stitch
                 const rules = ruleset["nr-rules"].filter( r => r["category"]==currentPrev.type.category);
                 const index = selectWeightedRandom(rules);
                 if(index !== undefined) {
                     const r = rules[index];
 
+                    // get all stitches the new one gets worked into
                     const parents: Vertex[] = [];
                     for(const c of r.consume) {
                         const p =this.vertices.get(previousRowIDs[i+c])
@@ -214,6 +83,7 @@ export class Pattern {
                             parents.push(p)
                     }
 
+                    // go over all stitches created by the chosen rule
                     for(let k=0;k<r.produce.length;k++) {
                         const produce = r.produce[k];
                         let stitch: Vertex;
@@ -222,9 +92,12 @@ export class Pattern {
                         else
                             stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
                         this.addVertex(stitch);
+
+                        // TODO: see if continue to skip chains etc or if check in next iter before rule application
                         if(stitch.type.category == "insert")
                             newIDs.push(stitch.id);
 
+                        // TODO: how to adapt this for holes?
                         if(previousID)
                             this.addEdge(stitch.id, previousID, "prev");
                         for(const p of parents)
@@ -243,7 +116,7 @@ export class Pattern {
         const after = this.vertices.get(idAfter);
         if(before && after){
             this.addVertex(hole);
-            const index = this.edges.findIndex( e => (e.from == before && e.to == after) || (e.to == before && e.from == after));
+            const index = this.edges.findIndex( e => (e.source == before && e.target == after) || (e.target == before && e.source == after));
             if(index >= 0)
                 this.edges.splice(index);
             let prev = before.id;
@@ -267,8 +140,8 @@ export class Pattern {
             let connectedEdge: Edge | undefined = new Edge(currentStitch, currentStitch, "prev", Modifiers.NO);
 
             while(connectedEdge) {
-                currentStitch = connectedEdge.from;
-                connectedEdge = this.edges.find(e => e.type == "prev" && e.to == currentStitch);
+                currentStitch = connectedEdge.source;
+                connectedEdge = this.edges.find(e => e.type == "prev" && e.target == currentStitch);
                 
                 if(layer != currentStitch.layer) {
                     pattern.push(layerString.join(", "));
@@ -281,6 +154,24 @@ export class Pattern {
             pattern.push(layerString.join(", "))
         }
         return pattern.join("\n");
+    }
+
+    force() {
+        const simNodes = Array.from(this.vertices.values());
+        const simulation = forceSimulation(simNodes, 3)
+            .force("link", forceLink(this.edges).distance(10).strength(1))
+            .force("charge", forceManyBody().strength(-100))
+            .force("collide", forceCollide().radius(10))
+            .force("center", forceCenter(0, 0, 0))
+            .stop();
+        const MAX_TICKS = 300; 
+        for (let i = 0; i < MAX_TICKS; i++) {
+            simulation.tick();
+            
+            if (simulation.alpha() < simulation.alphaMin()) 
+                break;
+        }
+        return simNodes;
     }
 }
 
