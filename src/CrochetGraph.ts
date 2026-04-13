@@ -183,20 +183,32 @@ export class Pattern {
     }
 
     force2D() {
-        const simNodes = Array.from(this.vertices.values());
+
+        // initiate with radial layout to reduce twists and crossings
+        const layers = this.getSortedLayers();
+        for (const l of layers) {
+            const angle = 2*Math.PI / l.length;
+            l.forEach( (v, index) => {
+                v.x = v.layer * Math.cos(index * angle); 
+                v.y = v.layer * Math.sin(index * angle);
+            })
+        }
+
+        const simNodes = layers.flat();
         const simulation = forceSimulation(simNodes, 2)
             .force("link", forceLink(this.edges).distance(e => e.length).strength(e => {
                 switch (e.type) {
                     case "insert": return 1.0;
-                    case "prev": return 0.5;
                     case "surround": return 0.8;
+                    case "prev": return 0.3;
                     default: return 0.1;
                 }
             }).iterations(5))
             .force("charge", forceManyBody().strength(-40))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial(v => v.layer*20, 0, 0, 0).strength(0.3))
+            .force("radial", forceRadial(v => v.layer*1.5, 0, 0, 0).strength(0.5))
             .stop();
+        simulation.alpha(0.5);
         const MAX_TICKS = 500; 
         for (let i = 0; i < MAX_TICKS; i++) {
             simulation.tick();
@@ -205,6 +217,42 @@ export class Pattern {
                 break;
         }
         return simNodes;
+    }
+
+    getSortedNodes(startId?: string, endId?: string) {
+        if(!startId)
+            startId = this.firstStitchID;
+        const verts = [];
+        let stitch = this.vertices.get(startId);
+        if(stitch)
+        while(stitch) {
+            verts.push(stitch)
+            const next = this.edges.find( e => e.type === "prev" && e.target === stitch)?.source;
+            stitch = next;
+            if(next?.id === endId)  // includes endId in sorted list
+                break;
+        }
+        return verts;
+    }
+
+    getSortedLayers(startId?: string, endId?: string) {
+        const sorted = this.getSortedNodes(startId, endId);
+        if (sorted.length < 1)
+            return [];
+        const layered = [];
+        let currentLayerList: Vertex[] = [];
+        let currentLayer = sorted[0].layer;
+        for(const v of sorted) {
+            if (v.layer !== currentLayer) {
+                layered.push(currentLayerList);
+                currentLayer = v.layer;
+                currentLayerList = [v];
+            }
+            else {
+                currentLayerList.push(v);
+            }
+        }
+        return layered;
     }
 }
 
