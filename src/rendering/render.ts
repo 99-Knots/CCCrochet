@@ -1,8 +1,13 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Vertex, Edge } from "../Stitches";
+import { Vertex, Edge, StitchTypes, StitchType } from "../Stitches";
 
-
+const EdgeTypeColors = {
+    "insert": "red",
+    "prev": "blue",
+    "slst": "yellow",
+    "surround": "green"
+}
 
 
 export class GraphRenderer {
@@ -72,31 +77,32 @@ export class GraphRenderer {
         const geometry = new THREE.SphereGeometry(this.sizeFactor);
 
         for (const n of nodes) {
-            const material = this.getMaterial(this._renderYarnColor ?? "white");;
+            const material = this.getMaterial(this._renderYarnColor ?? (n.type == StitchTypes.HL ? "green" : n.type == StitchTypes.CH ? "yellow" : "white"));;
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(n.x??0, n.y??0, n.z??0);
+            mesh.scale.set(20, 20, 20)
             this.scene.add(mesh);
             this.nodeMap.set(n.id, mesh);
         }
     }
 
     private createEdges(edges: Edge[]) {
-        const geometry = new THREE.CylinderGeometry(this.sizeFactor, this.sizeFactor, 1);
+        const geometry = new THREE.CylinderGeometry(this.sizeFactor*4, this.sizeFactor*4, 1);
         for (const e of edges) {
-            if(!(e.type == "insert" || e.type == "prev"))
-                continue;
+            //if(!(e.type == "insert" || e.type == "prev"))
+            //    continue;
             const a = this.nodeMap.get(e.target.id);
             const b = this.nodeMap.get(e.source.id);
             if (!a || !b) continue;
             const dist = a.position.distanceTo(b.position);
 
-            const material = this.getMaterial(this._renderYarnColor ?? "white");
+            const material = this.getMaterial(this._renderYarnColor ?? EdgeTypeColors[e.type]);
             const mesh = new THREE.Mesh(geometry, material);
 
             // resize
             mesh.scale.set(4, dist, 4);
-            a.scale.max(new THREE.Vector3(4, 4, 4));
-            b.scale.max(new THREE.Vector3(4, 4, 4));
+            //a.scale.max(new THREE.Vector3(4, 4, 4));
+            //b.scale.max(new THREE.Vector3(4, 4, 4));
 
             const midpoint = new THREE.Vector3().addVectors(a.position, b.position).divideScalar(2);
             mesh.position.copy(midpoint);

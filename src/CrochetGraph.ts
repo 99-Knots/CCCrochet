@@ -1,5 +1,5 @@
 import ruleset from "./assets/ruleset.json";
-import {forceSimulation, forceLink, forceManyBody, forceCollide, forceCenter} from "d3-force-3d";
+import {forceSimulation, forceLink, forceManyBody, forceCollide, forceCenter, forceRadial} from "d3-force-3d";
 
 import {Edge, Vertex, Hole, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 
@@ -13,6 +13,9 @@ export class Pattern {
     constructor(firstStitch?: Vertex) {
         if(!firstStitch)
             firstStitch = new Vertex("0", StitchTypes.MC, 0);
+        firstStitch.fx = 0;
+        firstStitch.fy = 0;
+        firstStitch.fz = 0;
         this.firstStitchID = firstStitch.id;
         this.addVertex(firstStitch);
         this.activeInsertions = [firstStitch];
@@ -104,6 +107,11 @@ export class Pattern {
                             this.addEdge(stitch.id, p.id, "insert");
                         previousID = stitch.id;
                     }
+                    for(let l=1; l<newIDs.length-1; l++) {
+                        const stitch = this.vertices.get(newIDs[l])
+                        if (stitch instanceof Hole)
+                            this.addHole(stitch, newIDs[l-1], newIDs[l+1]);
+                    }
                 }
             }
         }
@@ -116,10 +124,10 @@ export class Pattern {
         const after = this.vertices.get(idAfter);
         if(before && after){
             this.addVertex(hole);
-            const index = this.edges.findIndex( e => (e.source == before && e.target == after) || (e.target == before && e.source == after));
-            if(index >= 0)
-                this.edges.splice(index);
+            this.edges = this.edges.filter(e => !(e.target == hole) && !(e.source == hole));
             let prev = before.id;
+            this.addEdge(before.id, hole.id, "surround");
+            this.addEdge(after.id, hole.id, "surround")
             for(let i=0; i<hole.size; i++) {
                 const ch = new Vertex(hole.id+String(i), StitchTypes.CH, hole.layer);
                 this.addVertex(ch);
@@ -156,15 +164,40 @@ export class Pattern {
         return pattern.join("\n");
     }
 
-    force() {
+    force3D() {
         const simNodes = Array.from(this.vertices.values());
         const simulation = forceSimulation(simNodes, 3)
-            .force("link", forceLink(this.edges).distance(10).strength(1))
+            .force("link", forceLink(this.edges).distance(d => d.length).strength(1).iterations(10))
             .force("charge", forceManyBody().strength(-100))
             .force("collide", forceCollide().radius(10))
             .force("center", forceCenter(0, 0, 0))
             .stop();
         const MAX_TICKS = 300; 
+        for (let i = 0; i < MAX_TICKS; i++) {
+            simulation.tick();
+            
+            if (simulation.alpha() < simulation.alphaMin()) 
+                break;
+        }
+        return simNodes;
+    }
+
+    force2D() {
+        const simNodes = Array.from(this.vertices.values());
+        const simulation = forceSimulation(simNodes, 2)
+            .force("link", forceLink(this.edges).distance(e => e.length).strength(e => {
+                switch (e.type) {
+                    case "insert": return 1.0;
+                    case "prev": return 0.5;
+                    case "surround": return 0.8;
+                    default: return 0.1;
+                }
+            }).iterations(5))
+            .force("charge", forceManyBody().strength(-40))
+            .force("collide", forceCollide().radius(1))
+            .force("radial", forceRadial(v => v.layer*20, 0, 0, 0).strength(0.3))
+            .stop();
+        const MAX_TICKS = 500; 
         for (let i = 0; i < MAX_TICKS; i++) {
             simulation.tick();
             

@@ -86,6 +86,8 @@ export class Edge {
         this.source = from;
         this.type = type;
         this.mod = mod;
+        if(type == "surround")
+            this.length = 0.1
     }
 }
 
