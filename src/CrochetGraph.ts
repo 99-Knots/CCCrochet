@@ -166,9 +166,9 @@ export class Pattern {
 
         const simNodes = Array.from(this.vertices.values());
         const simulation = forceSimulation(simNodes, 3)
-            .force("link", forceLink(this.edges).distance(d => d.length).strength(1).iterations(10))
+            .force("link", forceLink<Vertex, Edge>(this.edges).distance(( e: Edge) => e.length*10).strength(1).iterations(10))
             .force("charge", forceManyBody().strength(-50))
-            .force("collide", forceCollide().radius(10))
+            .force("collide", forceCollide(10))
             .stop();
 
         const MAX_TICKS = 500; 
@@ -194,7 +194,7 @@ export class Pattern {
 
         const simNodes = layers.flat();
         const simulation = forceSimulation(simNodes, 2)
-            .force("link", forceLink(this.edges).distance(e => e.length).strength(e => {
+            .force("link", forceLink<Vertex, Edge>(this.edges).distance( (e: Edge) => e.length).strength( (e: Edge) => {
                 switch (e.type) {
                     case "insert": return 1.0;
                     case "surround": return 0.8;
@@ -204,7 +204,7 @@ export class Pattern {
             }).iterations(8))
             .force("charge", forceManyBody().strength(-40))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial(v => v.layer*1.5, 0, 0).strength(0.5))
+            .force("radial", forceRadial<Vertex>(v => v.layer*1.5, 0, 0).strength(0.5))
             .stop();
 
         simulation.alpha(0.5);
