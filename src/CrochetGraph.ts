@@ -52,16 +52,6 @@ export class Pattern {
         return hole;
     }
 
-    getLayerIDs(layer: number) {
-        // incorrect order
-        const IDs: Vertex[] = Array.from(this.vertices.values()).filter(v => v.layer === layer);
-        IDs.sort((a, b) => {
-                const edge = this.edges.find(e => e.source.id === a.id && e.target.id === b.id && e.type === "prev");
-                return edge ? 1 : -1;
-            });
-        return IDs;
-    }
-
     addRow(previousRowIDs: string[]) {
         this.currentRow += 1;
         const newIDs: string[] = [];
@@ -107,6 +97,8 @@ export class Pattern {
                             this.addEdge(stitch.id, p.id, "insert");
                         previousID = stitch.id;
                     }
+
+                    // TODO: find better spot for this
                     for(let l=1; l<newIDs.length-1; l++) {
                         const stitch = this.vertices.get(newIDs[l])
                         if (stitch instanceof Hole)
@@ -119,7 +111,7 @@ export class Pattern {
     }
 
     addHole(hole: Hole, idBefore: string, idAfter: string) {
-        // TODO: possibly not needed because chains only needed for rendering?
+        // TODO: remove need for before and after?
         const before = this.vertices.get(idBefore);
         const after = this.vertices.get(idAfter);
         if(before && after){
@@ -165,14 +157,21 @@ export class Pattern {
     }
 
     force3D() {
+        const firstStitch = this.vertices.get(this.firstStitchID);
+        if(firstStitch) {
+            firstStitch.fx = 0;
+            firstStitch.fy = 0;
+            // don't lock z to allow the tail end to get "pushed put"
+        }
+
         const simNodes = Array.from(this.vertices.values());
         const simulation = forceSimulation(simNodes, 3)
             .force("link", forceLink(this.edges).distance(d => d.length).strength(1).iterations(10))
-            .force("charge", forceManyBody().strength(-100))
+            .force("charge", forceManyBody().strength(-50))
             .force("collide", forceCollide().radius(10))
-            .force("center", forceCenter(0, 0, 0))
             .stop();
-        const MAX_TICKS = 300; 
+
+        const MAX_TICKS = 500; 
         for (let i = 0; i < MAX_TICKS; i++) {
             simulation.tick();
             
@@ -183,7 +182,6 @@ export class Pattern {
     }
 
     force2D() {
-
         // initiate with radial layout to reduce twists and crossings
         const layers = this.getSortedLayers();
         for (const l of layers) {
@@ -203,11 +201,12 @@ export class Pattern {
                     case "prev": return 0.3;
                     default: return 0.1;
                 }
-            }).iterations(5))
+            }).iterations(8))
             .force("charge", forceManyBody().strength(-40))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial(v => v.layer*1.5, 0, 0, 0).strength(0.5))
+            .force("radial", forceRadial(v => v.layer*1.5, 0, 0).strength(0.5))
             .stop();
+
         simulation.alpha(0.5);
         const MAX_TICKS = 500; 
         for (let i = 0; i < MAX_TICKS; i++) {
@@ -252,6 +251,7 @@ export class Pattern {
                 currentLayerList.push(v);
             }
         }
+        layered.push(currentLayerList);
         return layered;
     }
 }

@@ -28,7 +28,7 @@ export class GraphRenderer {
     private materialMap = new Map<THREE.ColorRepresentation, THREE.MeshStandardMaterial>();
 
     constructor(container: HTMLElement) {
-        this.sizeFactor = 0.1;
+        this.sizeFactor = 8;
         this.container = container;
 
         this.scene = new THREE.Scene();
@@ -38,7 +38,7 @@ export class GraphRenderer {
             0.1,
             1000
         );
-        this.camera.position.set(0, 7, 7);
+        this.camera.position.set(0, 70, 70);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
@@ -79,15 +79,15 @@ export class GraphRenderer {
         for (const n of nodes) {
             const material = this.getMaterial(this._renderYarnColor ?? (n.type == StitchTypes.HL ? "green" : n.type == StitchTypes.CH ? "yellow" : "white"));;
             const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(n.x??0, n.y??0, n.z??0);
-            mesh.scale.set(20, 20, 20)
+            mesh.position.set(n.x??0, -(n.y??0), n.z??0);
+            //mesh.scale.set(this.sizeFactor, this.sizeFactor, this.sizeFactor)
             this.scene.add(mesh);
             this.nodeMap.set(n.id, mesh);
         }
     }
 
     private createEdges(edges: Edge[]) {
-        const geometry = new THREE.CylinderGeometry(this.sizeFactor*4, this.sizeFactor*4, 1);
+        const geometry = new THREE.CylinderGeometry(1, 1, 1);
         for (const e of edges) {
             //if(!(e.type == "insert" || e.type == "prev"))
             //    continue;
@@ -100,7 +100,7 @@ export class GraphRenderer {
             const mesh = new THREE.Mesh(geometry, material);
 
             // resize
-            mesh.scale.set(4, dist, 4);
+            mesh.scale.set(this.sizeFactor, dist, this.sizeFactor);
             //a.scale.max(new THREE.Vector3(4, 4, 4));
             //b.scale.max(new THREE.Vector3(4, 4, 4));
 

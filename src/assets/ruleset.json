@@ -60,7 +60,7 @@
                 {"type": "hole", "size": 2},
                 {"type": "sc"}
             ],
-            "weight": 1
+            "weight": 0
         }
     ],
     "mod-rules": [

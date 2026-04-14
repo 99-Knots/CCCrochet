@@ -1,8 +1,11 @@
+import stitchSymbols from "./assets/stitchSymbols.json"
+
 export type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring";
 
 export class StitchType {
     type: Stitch = "ch";
     category: "ring" | "insert" | "terminal";
+    symbol?: {symbol: string, fill?: boolean, bar?: boolean, height: number};
 
     constructor(type: Stitch) {
         this.type = type;
@@ -25,6 +28,8 @@ export class StitchType {
                 break;
             }
         }
+        if(this.type in stitchSymbols)
+            this.symbol = (stitchSymbols as any)[this.type];
     }
 }
 
@@ -43,12 +48,17 @@ export const StitchTypes = {
 export class Modifier {
     private type: "p" | "l" | "" = "";
     private position: "f" | "b" = "f";
+    symbol: {symbol: string, height: number} = {symbol: "", height: 0};
+
 
     constructor(type?: "p" | "l" | "", position?: "f" | "b") {
         if(type)
             this.type = type;
         if(position && type !== "") 
             this.position = position;
+        const temp = this.position + this.type;
+        if(temp in stitchSymbols)
+            this.symbol = (stitchSymbols as any)[temp];
     }
 
     applyToStitch(stitch: StitchType) {
@@ -86,8 +96,21 @@ export class Edge {
         this.source = from;
         this.type = type;
         this.mod = mod;
-        if(type == "surround")
-            this.length = 0.1
+        switch(this.type) {
+            case "prev":
+                this.length = 0.5;
+                break;
+            case "insert":
+                this.length = this.source.type.symbol?.height ?? 1;
+                break;
+            case "slst":
+                this.length = 0.5;
+                break;
+            case "surround":
+                this.length = 0.1;
+                break;
+        }
+        this.length += this.mod.symbol?.height??0;
     }
 }
 
