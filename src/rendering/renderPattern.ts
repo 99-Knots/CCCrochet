@@ -1,9 +1,36 @@
 import stitchSymbols from "../assets/stitchSymbols.json"
 import { Edge, Vertex } from "../Stitches";
+import { select } from 'd3-selection';
+import { zoom } from 'd3-zoom';
 
 
-export function drawToSVG(svg: HTMLElement, vertices: Vertex[], edges: Edge[]) {
+export function setupZoom(svgElement: SVGSVGElement, contentGroup: SVGGElement) {
+    const zoomBehavior = zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.1, 10])
+        .on('zoom', (event) => {
+            contentGroup.setAttribute('transform', event.transform.toString());
+        });
+    select(svgElement).call(zoomBehavior);
+}
+
+
+export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[]) {
+    svg.innerHTML = "";
     const svgNamespace = "http://www.w3.org/2000/svg";
+
+    const g = document.createElementNS(svgNamespace, "g");
+    g.classList.add("viewport");
+
+    const stitches = document.createElementNS(svgNamespace, "g");
+    stitches.classList.add("stitches")
+    const layerLines = document.createElementNS(svgNamespace, "g");
+    layerLines.classList.add("layer-lines");
+    
+    g.appendChild(stitches);
+    g.appendChild(layerLines);
+
+    svg.appendChild(g);
+
     vertices.forEach( v => {            
         const inserts = edges.filter( e => e.type == "insert" && e.source === v);
         let angleAvg = 0;
@@ -24,7 +51,7 @@ export function drawToSVG(svg: HTMLElement, vertices: Vertex[], edges: Edge[]) {
 
             const transform = `translate(${(e.source.x ?? 0)}, ${e.source.y ?? 0}) rotate(${angle}) scale(0.05, ${scale}) translate(-50, -5)`;
             path.setAttribute("transform", transform);
-            svg.appendChild(path)
+            stitches.appendChild(path)
         });
 
         // draw bar over (connected) stitches
@@ -35,7 +62,7 @@ export function drawToSVG(svg: HTMLElement, vertices: Vertex[], edges: Edge[]) {
             angleAvg /= (inserts.length??1);
             const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angleAvg}) scale(0.05, ${scaleAvg}) translate(-50, -5)`;
             bar.setAttribute("transform", transform);
-            svg.appendChild(bar)
+            stitches.appendChild(bar);
         }
 
         // draw line along layer outline
@@ -46,11 +73,12 @@ export function drawToSVG(svg: HTMLElement, vertices: Vertex[], edges: Edge[]) {
             path.setAttribute("y1", `${prev?.source.y ?? 0}`);
             path.setAttribute("x2", `${prev?.target.x ?? 0}`);
             path.setAttribute("y2", `${prev?.target.y ?? 0}`);
-            path.setAttribute("stroke-width", "0.1");
+            path.setAttribute("stroke-width", "1");
             path.setAttribute("stroke", "blue");
-            svg.appendChild(path)
+            layerLines.appendChild(path)
         }
     });
+    setupZoom(svg, g);
 }
 
         

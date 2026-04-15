@@ -110,7 +110,7 @@ export class Edge {
                 this.length = 0.1;
                 break;
         }
-        this.length += this.mod.symbol?.height??0;
+        this.length += this.mod.symbol?.height ?? 0;
     }
 }
 

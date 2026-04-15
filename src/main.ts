@@ -11,21 +11,21 @@ function generatePattern(numRows: number) {
     let l = pat.addRow([pat.firstStitchID]);
     for (let j = 0; j < numRows; j++)
         l = pat.addRow(l);
-    //pattern.innerText = pat.serialize();
     return pat;
 }
 
 async function renderPattern(pattern: CG.Pattern, canvas: HTMLElement, color: string|null = null) {
     const renderer = new GraphRenderer(canvas);
-    //renderer.renderYarnColor = color;
+    if(color)
+        renderer.renderYarnColor = color;
 
     renderer.renderGraph({nodes: pattern.force3D(), edges: pattern.edges});
-    const svg = document.getElementById("vis-pattern")!;
+    const svg = document.querySelector("#vis-pattern") as SVGSVGElement;
     drawToSVG(svg, pattern.force2D(), pattern.edges);
     return renderer;
 }
 
-const pattern = document.getElementById("pattern")!;
+//const pattern = document.getElementById("pattern")!;
 
 let numSamples = 1;
 let numRows = 6;
@@ -35,7 +35,7 @@ const patternList: CG.Pattern[] = [];
 const rendererList: GraphRenderer[] = []
 for (let i = 0; i < numSamples; i++) {
     const pat = generatePattern(numRows);
-    const rend = await renderPattern(pat, canvas, "white");
+    const rend = await renderPattern(pat, canvas);
     patternList.push(pat);
     rendererList.push(rend);
 }

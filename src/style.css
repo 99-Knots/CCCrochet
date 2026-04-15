@@ -20,6 +20,6 @@
     aspect-ratio: 1;
 }
 
-.vis-pattern path {
+.vis-pattern path,line {
     vector-effect: non-scaling-stroke;
 }

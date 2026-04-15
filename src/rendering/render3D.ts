@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Vertex, Edge, StitchTypes, StitchType } from "../Stitches";
+import { Vertex, Edge, StitchTypes } from "../Stitches";
 
 const EdgeTypeColors = {
     "insert": "red",

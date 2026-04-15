@@ -1,7 +1,7 @@
 import ruleset from "./assets/ruleset.json";
-import {forceSimulation, forceLink, forceManyBody, forceCollide, forceCenter, forceRadial} from "d3-force-3d";
-
+import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
 import {Edge, Vertex, Hole, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
+
 
 export class Pattern {
     edges: Edge[] = [];
