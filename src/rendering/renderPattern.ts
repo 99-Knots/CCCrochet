@@ -18,6 +18,20 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
     svg.innerHTML = "";
     const svgNamespace = "http://www.w3.org/2000/svg";
 
+    // TODO: does this actually save time?
+    const prevMap = new Map<Vertex, Vertex>();
+    const prevMapInv = new Map<Vertex, Vertex>();
+    edges.filter( e => e.type === "prev").forEach( e => { prevMap.set(e.source, e.target); prevMapInv.set(e.target, e.source); });
+
+    const parentMap = new Map<Vertex, {parent: Vertex, edge: Edge}[]>();  // all stitches a given stitch has been inserted into
+    edges.filter( e => e.type === "insert").forEach( e => { 
+        const oldMap = parentMap.get(e.source); 
+        if (oldMap)
+            oldMap.push({parent: e.target, edge: e});
+        else
+            parentMap.set(e.source, [{parent: e.target, edge: e}]);
+    });
+
     const g = document.createElementNS(svgNamespace, "g");
     g.classList.add("viewport");
 
@@ -32,37 +46,57 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
     svg.appendChild(g);
 
     vertices.forEach( v => {            
-        const inserts = edges.filter( e => e.type == "insert" && e.source === v);
+        const inserts = parentMap.get(v);
         let angleAvg = 0;
         let scaleAvg = 0;
 
-        // draw connection between stitch and parent(s)
-        inserts.forEach( e => {
+        if(inserts) {
+            // draw connection between stitch and parent(s)
+            inserts.forEach( ve => {
+                const path = document.createElementNS(svgNamespace, "path");
+                path.setAttribute("d", v.type.symbol!.symbol + ve.edge.mod.symbol.symbol);
+                const dx = (ve.parent.x  ?? 0) - (v.x ?? 0);
+                const dy = (ve.parent.y ?? 0) - (v.y ?? 0);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
+                angleAvg += angle;
+                
+                const scale = distance / 100;
+                scaleAvg += scale;
+
+                const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angle}) scale(0.05, ${scale}) translate(-50, -5)`;
+                path.setAttribute("transform", transform);
+                stitches.appendChild(path)
+            });
+
+            // draw bar over (connected) stitches
+            if (v.type.symbol?.bar) {
+                const bar = document.createElementNS(svgNamespace, "path");
+                bar.setAttribute("d", stitchSymbols["bar"].symbol);
+                scaleAvg /= (inserts.length??1);
+                angleAvg /= (inserts.length??1);
+                const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angleAvg}) scale(0.05, ${scaleAvg}) translate(-50, -5)`;
+                bar.setAttribute("transform", transform);
+                stitches.appendChild(bar);
+            }
+        }
+        else {
             const path = document.createElementNS(svgNamespace, "path");
-            path.setAttribute("d", v.type.symbol!.symbol + e.mod.symbol.symbol);
-            const dx = (e.target.x  ?? 0) - (e.source.x ?? 0);
-            const dy = (e.target.y ?? 0) - (e.source.y ?? 0);
+            path.setAttribute("d", v.type.symbol!.symbol);
+            // TODO: angle and distance need to be reworked
+            let prev = prevMap.get(v);
+            if (!prev)
+                prev =prevMapInv.get(v);
+            const dx = (prev?.x ?? 0) - (v.x ??0);
+            const dy = (prev?.y ?? 0) - (v.y ??0);
             const distance = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
-            angleAvg += angle;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
             
             const scale = distance / 100;
-            scaleAvg += scale;
-
-            const transform = `translate(${(e.source.x ?? 0)}, ${e.source.y ?? 0}) rotate(${angle}) scale(0.05, ${scale}) translate(-50, -5)`;
+            console.log("x, y:", v.x, v.y, "\nangle:", angle, "\nscale:", scale);
+            const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angle}) scale(${scale})  translate(-50, -50)`;
             path.setAttribute("transform", transform);
             stitches.appendChild(path)
-        });
-
-        // draw bar over (connected) stitches
-        if (v.type.symbol?.bar) {
-            const bar = document.createElementNS(svgNamespace, "path");
-            bar.setAttribute("d", stitchSymbols["bar"].symbol);
-            scaleAvg /= (inserts.length??1);
-            angleAvg /= (inserts.length??1);
-            const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angleAvg}) scale(0.05, ${scaleAvg}) translate(-50, -5)`;
-            bar.setAttribute("transform", transform);
-            stitches.appendChild(bar);
         }
 
         // draw line along layer outline

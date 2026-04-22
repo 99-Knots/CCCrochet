@@ -112,6 +112,7 @@ export class Pattern {
 
     addHole(hole: Hole, idBefore: string, idAfter: string) {
         // TODO: remove need for before and after?
+        // TODO: process holes differently, establish links between chains and inserted stitches, adjust if and how they affect each other in the force directed layout -> new edgetype
         const before = this.vertices.get(idBefore);
         const after = this.vertices.get(idAfter);
         if(before && after){
@@ -166,7 +167,7 @@ export class Pattern {
 
         const simNodes = Array.from(this.vertices.values());
         const simulation = forceSimulation(simNodes, 3)
-            .force("link", forceLink<Vertex, Edge>(this.edges).distance(( e: Edge) => e.length*10).strength(1).iterations(10))
+            .force("link", forceLink<Vertex, Edge>(this.edges).distance(( e: Edge) => e.length).strength(1).iterations(10))
             .force("charge", forceManyBody().strength(-50))
             .force("collide", forceCollide(10))
             .stop();
@@ -189,12 +190,12 @@ export class Pattern {
             l.forEach( (v, index) => {
                 v.x = v.layer * Math.cos(index * angle); 
                 v.y = v.layer * Math.sin(index * angle);
-            })
+            });
         }
 
         const simNodes = layers.flat();
         const simulation = forceSimulation(simNodes, 2)
-            .force("link", forceLink<Vertex, Edge>(this.edges).distance( (e: Edge) => e.length).strength( (e: Edge) => {
+            .force("link", forceLink<Vertex, Edge>(this.edges).distance( (e: Edge) => e.length*6).strength( (e: Edge) => {
                 switch (e.type) {
                     case "insert": return 1.0;
                     case "surround": return 0.8;
@@ -202,9 +203,9 @@ export class Pattern {
                     default: return 0.1;
                 }
             }).iterations(8))
-            .force("charge", forceManyBody().strength(-40))
+            .force("charge", forceManyBody().strength(-10))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial<Vertex>(v => v.layer*1.5, 0, 0).strength(0.5))
+            .force("radial", forceRadial<Vertex>(v => v.layer*6, 0, 0).strength(0.5))
             .stop();
 
         simulation.alpha(0.5);
