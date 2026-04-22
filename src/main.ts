@@ -2,6 +2,7 @@ import './style.css'
 import * as CG from './CrochetGraph.ts'
 import { GraphRenderer } from './rendering/render3D.ts';
 import { drawToSVG } from './rendering/renderPattern.ts';
+import { Vertex } from './Stitches.ts';
 
 
 function generatePattern(numRows: number) {
@@ -14,29 +15,37 @@ function generatePattern(numRows: number) {
     return pat;
 }
 
-async function renderPattern(pattern: CG.Pattern, canvas: HTMLElement, color: string|null = null) {
+function createRenderer(canvas: HTMLElement) {
     const renderer = new GraphRenderer(canvas);
-    if(color)
-        renderer.renderYarnColor = color;
+    return renderer;
+}
 
-    renderer.renderGraph({nodes: pattern.force3D(), edges: pattern.edges});
+async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, color: string|null = null) {
+    const elem = document.createElement("div");
+    elem.classList.add("scene");
+    canvas.appendChild(elem);
+    const scene = renderer.addScene(elem);
+    if(color)
+        scene.renderYarnColor = color;
+    scene.modelGraph({nodes: pattern.force3D(), edges: pattern.edges});
     const svg = document.querySelector("#vis-pattern") as SVGSVGElement;
     drawToSVG(svg, pattern.force2D(), pattern.edges);
-    return renderer;
+    return scene;
 }
 
 //const pattern = document.getElementById("pattern")!;
 
-let numSamples = 1;
+let numSamples = 4;
 let numRows = 6;
 
 const canvas = document.getElementById("canvas")!;
 const patternList: CG.Pattern[] = [];
-const rendererList: GraphRenderer[] = []
+
+const renderer = createRenderer(canvas);
 for (let i = 0; i < numSamples; i++) {
     const pat = generatePattern(numRows);
-    const rend = await renderPattern(pat, canvas);
+    const rend = await renderPattern(pat, renderer);
     patternList.push(pat);
-    rendererList.push(rend);
+    //rendererList.push(rend);
 }
 
