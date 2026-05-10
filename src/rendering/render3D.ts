@@ -4,9 +4,11 @@ import { Vertex, Edge, StitchTypes } from "../Stitches";
 
 const EdgeTypeColors = {
     "insert": "red",
+    "simInsert": "red",
     "prev": "blue",
     "slst": "yellow",
-    "surround": "green"
+    "surround": "green",
+    "support": "orange"
 }
 
 const sharedResources = {
@@ -76,6 +78,8 @@ export class GraphScene {
         const geometry = sharedResources.sphereGeo;
 
         for (const n of nodes) {
+            if(n.type === StitchTypes.HL)
+                continue;
             const material = this.renderer.getMaterial(this._renderYarnColor ?? (n.type == StitchTypes.HL ? "green" : n.type == StitchTypes.CH ? "yellow" : "white"));;
             const mesh = new THREE.Mesh(geometry, material);
             mesh.position.set(n.x??0, -(n.y??0), n.z??0);
@@ -88,8 +92,8 @@ export class GraphScene {
         private createEdges(edges: Edge[]) {
         const geometry = sharedResources.cylinderGeo;
         for (const e of edges) {
-            //if(!(e.type == "insert" || e.type == "prev"))
-            //    continue;
+            if(!(e.type == "insert" || e.type == "prev" || e.type == "simInsert"))
+                continue;
             const a = this.nodeMeshMap.get(e.target.id);
             const b = this.nodeMeshMap.get(e.source.id);
             if (!a || !b) continue;

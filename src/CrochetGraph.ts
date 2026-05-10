@@ -1,14 +1,21 @@
 import ruleset from "./assets/ruleset.json";
 import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
-import {Edge, Vertex, Hole, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
+import {Edge, Vertex, Hole, Support, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
+import { forceCollinearSupport } from "./forces";
 
 
 export class Pattern {
     edges: Edge[] = [];
     vertices: Map<string, Vertex> = new Map();
-    currentRow: number = 0;
-    activeInsertions: Vertex[] = [];
+    private currentRow: number = 0;
     firstStitchID: string;
+    private prevMap = new Map<Vertex, Vertex>();    // mapping stitch to previous one
+    private nextMap = new Map<Vertex, Vertex>();    // mapping stitch to following one
+
+    private parentMap = new Map<Vertex, {parent: Vertex, edge: Edge}[]>();   // all stitches a given stitch has been inserted into
+    private insertMap = new Map<Vertex, {child: Vertex, edge: Edge}[]>();   // all stitches inserted into a given stitch
+
+    private sortedLayers: (Vertex[])[] = [];
 
     constructor(firstStitch?: Vertex) {
         if(!firstStitch)
@@ -18,21 +25,20 @@ export class Pattern {
         firstStitch.fz = 0;
         this.firstStitchID = firstStitch.id;
         this.addVertex(firstStitch);
-        this.activeInsertions = [firstStitch];
     }
 
-    addVertex(v: Vertex) {
+    private addVertex(v: Vertex) {
         this.vertices.set(v.id, v);
     }
 
-    addEdge(fromID: string, toID: string, type: EdgeType, mod: Modifier=Modifiers.NO) {
+    private addEdge(fromID: string, toID: string, type: EdgeType, mod: Modifier=Modifiers.NO) {
         const source = this.vertices.get(fromID);
         const target = this.vertices.get(toID);
         if(source && target)
             this.edges.push(new Edge(source, target, type, mod))
     }
 
-    startChain(n: number) {
+    private startChain(n: number) {
         if(n<2) {
             return null;
         }
@@ -52,7 +58,38 @@ export class Pattern {
         return hole;
     }
 
-    addRow(previousRowIDs: string[]) {
+    generate(numRows: number) {
+        let l = this.addRow([this.firstStitchID]);
+        for (let j = 0; j < numRows; j++)
+            l = this.addRow(l);
+
+
+        this.edges.filter( e => e.type === "prev").forEach( e => { 
+            this.prevMap.set(e.source, e.target); 
+            this.nextMap.set(e.target, e.source); 
+        });
+
+        this.edges.filter( e => e.type === "insert").forEach( e => { 
+            const oldParentMap = this.parentMap.get(e.source); 
+            if (oldParentMap)
+                oldParentMap.push({parent: e.target, edge: e});
+            else
+                this.parentMap.set(e.source, [{parent: e.target, edge: e}]);
+
+            const oldInsertMap = this.insertMap.get(e.target); 
+            if (oldInsertMap)
+                oldInsertMap.push({child: e.source, edge: e});
+            else
+                this.insertMap.set(e.target, [{child: e.source, edge: e}]);
+        });
+
+        this.sortedLayers = this.getSortedLayers();
+        this.processHoles();
+
+        return this;
+    }
+
+    private addRow(previousRowIDs: string[]) {
         this.currentRow += 1;
         const newIDs: string[] = [];
         let previousID: string = previousRowIDs[previousRowIDs.length-1];
@@ -93,31 +130,83 @@ export class Pattern {
                         // TODO: how to adapt this for holes?
                         if(previousID)
                             this.addEdge(stitch.id, previousID, "prev");
-                        for(const p of parents)
+                        for(const p of parents) {
                             this.addEdge(stitch.id, p.id, "insert");
+                        }
                         previousID = stitch.id;
-                    }
-
-                    // TODO: find better spot for this
-                    for(let l=1; l<newIDs.length-1; l++) {
-                        const stitch = this.vertices.get(newIDs[l])
-                        if (stitch instanceof Hole)
-                            this.addHole(stitch, newIDs[l-1], newIDs[l+1]);
-                    }
+                    }                    
                 }
             }
+        }
+        for(let l=1; l<newIDs.length-1; l++) {
+            const stitch = this.vertices.get(newIDs[l])
+            if (stitch instanceof Hole)
+                this.addHole(stitch, newIDs[l-1], newIDs[l+1]);
         }
         return newIDs;
     }
 
-    addHole(hole: Hole, idBefore: string, idAfter: string) {
+
+    private processHoles() {
+        //const stitches = this.sortedLayers.flat();
+        //console.log(stitches.length);
+        const holes = Array.from(this.vertices.values()).filter(v => v instanceof Hole) as Hole[];
+        for(const hole of holes) {
+            let insertions = this.insertMap.get(hole)?.filter( i => i.child.type != StitchTypes.HL) ?? [];
+            let insertionVerts = insertions.map( i => i.child);
+            insertions.forEach( i => i.edge.doRender = false);
+
+            insertionVerts = this.sortSubset(insertionVerts);
+
+            let surroundings = this.edges.filter(e => (e.target == hole && e.type == "surround")).map( e => e.source);
+            surroundings = this.sortSubset(surroundings);
+
+            // remove previous insertion edges
+            //this.edges = this.edges.filter(e => !(e.type === "insert" && e.target.id === hole.id));
+
+            const M = insertionVerts.length;
+            const N = surroundings.length;
+            const epsilon = 0.1;
+
+            for (let i = 0; i < M; i++) {
+                const stitch = insertionVerts[i];
+                
+                const floatIndex = (i+1) * (N-1) / (M+1);
+                
+                const idx1 = Math.floor(floatIndex);
+                const idx2 = Math.ceil(floatIndex);
+                const diff = floatIndex - idx1;
+
+                if (diff < epsilon){
+                    this.addEdge(stitch.id, surroundings[idx1].id, "simInsert");
+                }
+                else if (diff > 1-epsilon) {
+                    this.addEdge(stitch.id, surroundings[idx2].id, "simInsert");
+                }
+                else {
+                    const support = new Support(stitch.id, surroundings[idx1].layer);
+                    support.interpolationDiff = diff;
+                    //new Vertex(stitch.id + "-support", StitchTypes.SP, surroundings[idx1].layer);
+                    this.addVertex(support);
+                    this.addEdge(support.id, surroundings[idx1].id, "support");
+                    this.addEdge(support.id, surroundings[idx2].id, "support");
+                    this.addEdge(stitch.id, support.id, "simInsert");
+                }
+
+                
+            }
+        }
+    }
+
+    private addHole(hole: Hole, idBefore: string, idAfter: string) {
         // TODO: remove need for before and after?
         // TODO: process holes differently, establish links between chains and inserted stitches, adjust if and how they affect each other in the force directed layout -> new edgetype
         const before = this.vertices.get(idBefore);
         const after = this.vertices.get(idAfter);
         if(before && after){
             this.addVertex(hole);
-            this.edges = this.edges.filter(e => !(e.target == hole) && !(e.source == hole));
+            //this.edges = this.edges.filter(e => !(e.target == hole) && !(e.source == hole));
+            this.edges = this.edges.filter(e => !(e.source === hole && e.type === "prev") && !(e.target === hole && e.type === "prev"));
             let prev = before.id;
             this.addEdge(before.id, hole.id, "surround");
             this.addEdge(after.id, hole.id, "surround")
@@ -164,12 +253,42 @@ export class Pattern {
             firstStitch.fy = 0;
             // don't lock z to allow the tail end to get "pushed put"
         }
+        
+        // initiate with radial layout to reduce twists and crossings
+        const stretchFactor = 8;
+        const layers = this.sortedLayers;
+        for (const l of layers) {
+            const angle = 2*Math.PI / l.length;
+            l.forEach( (v, index) => {
+                v.x = v.layer*stretchFactor * Math.cos(index * angle); 
+                v.y = v.layer*stretchFactor * Math.sin(index * angle);
+            });
+        }
 
-        const simNodes = Array.from(this.vertices.values());
-        const simulation = forceSimulation(simNodes, 3)
-            .force("link", forceLink<Vertex, Edge>(this.edges).distance(( e: Edge) => e.length).strength(1).iterations(10))
-            .force("charge", forceManyBody().strength(-50))
-            .force("collide", forceCollide(10))
+        const supportVerts = Array.from(this.vertices.values()).filter(v => v.type == StitchTypes.SP);
+        const simNodes = layers.flat().concat(supportVerts);
+        const simulation = forceSimulation(simNodes, 3) // adjust strength based on edge type  
+            .force("supports", forceCollinearSupport(this.edges)) 
+            .force("link", forceLink<Vertex, Edge>(this.edges)
+                .distance(( e: Edge) => e.length)
+                .strength( (e: Edge) => {
+                    switch (e.type) {
+                        case "support": 
+                            return 0.0;
+                        case "insert": 
+                        case "simInsert":
+                            return e.target instanceof Hole ? 0.0 : 2.0;
+                        case "surround": 
+                            return 0.5; // Allow the hole center to be flexible
+                        case "prev": 
+                            return 0.8;
+                        default: 
+                            return 0.1;
+                    }
+                })
+                .iterations(10))
+            .force("charge", forceManyBody().strength((v: Vertex) => (v.type == StitchTypes.SP) ? 20 : -80))
+            .force("collide", forceCollide( (v: Vertex) => (v.type == StitchTypes.SP) ? 0 : 10))
             .stop();
 
         const MAX_TICKS = 500; 
@@ -184,28 +303,34 @@ export class Pattern {
 
     force2D() {
         // initiate with radial layout to reduce twists and crossings
-        const layers = this.getSortedLayers();
+        const stretchFactor = 8;
+        const layers = this.sortedLayers;
         for (const l of layers) {
             const angle = 2*Math.PI / l.length;
             l.forEach( (v, index) => {
-                v.x = v.layer * Math.cos(index * angle); 
-                v.y = v.layer * Math.sin(index * angle);
+                v.x = v.layer*stretchFactor*2 * Math.cos(index * angle); 
+                v.y = v.layer*stretchFactor*2 * Math.sin(index * angle);
             });
         }
-
-        const simNodes = layers.flat();
+        
+        const supportVerts = Array.from(this.vertices.values()).filter(v => v.type == StitchTypes.SP);
+        const simNodes = layers.flat().concat(supportVerts);
+        
         const simulation = forceSimulation(simNodes, 2)
-            .force("link", forceLink<Vertex, Edge>(this.edges).distance( (e: Edge) => e.length*6).strength( (e: Edge) => {
+            .force("link", forceLink<Vertex, Edge>(this.edges).distance( (e: Edge) => e.length*stretchFactor).strength( (e: Edge) => {
                 switch (e.type) {
+                    case "simInsert":
                     case "insert": return 1.0;
                     case "surround": return 0.8;
                     case "prev": return 0.3;
+                    case "support": return 0.0;
                     default: return 0.1;
                 }
             }).iterations(8))
             .force("charge", forceManyBody().strength(-10))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial<Vertex>(v => v.layer*6, 0, 0).strength(0.5))
+            .force("radial", forceRadial<Vertex>(v => v.layer*stretchFactor, 0, 0).strength(0.5))
+            .force("supports", forceCollinearSupport(this.edges))
             .stop();
 
         simulation.alpha(0.5);
@@ -219,24 +344,48 @@ export class Pattern {
         return simNodes;
     }
 
-    getSortedNodes(startId?: string, endId?: string) {
-        if(!startId)
-            startId = this.firstStitchID;
-        const verts = [];
-        let stitch = this.vertices.get(startId);
-        if(stitch)
-        while(stitch) {
-            verts.push(stitch)
-            const next = this.edges.find( e => e.type === "prev" && e.target === stitch)?.source;
-            stitch = next;
-            if(next?.id === endId)  // includes endId in sorted list
-                break;
+    private sortNodes(includeHoles?: boolean) {
+        // if no selection defined, use all stitches
+        const stitches = Array.from(this.vertices.values());
+
+        // 
+        const stitchSet = new Set(stitches);
+        const sorted = new Set<Vertex>();
+
+        // find the first stitch by finding the one with no previous one
+        let current = stitches.find( s => {
+            const prev = this.prevMap.get(s); 
+            return !prev || !stitchSet.has(prev);   // either no prev at all or prev not in 
+        });
+
+        // go over inverted prev edges to get next stitch
+        while(current && stitchSet.has(current)) {
+            const holes = this.edges.filter( e => e.type == "surround" && e.source == current);
+            if(holes && includeHoles) {
+                holes.forEach( h => sorted.add(h.target));
+            }
+            sorted.add(current);
+            current = this.nextMap.get(current);
         }
-        return verts;
+        return Array.from(sorted);
     }
 
-    getSortedLayers(startId?: string, endId?: string) {
-        const sorted = this.getSortedNodes(startId, endId);
+    private sortSubset(stitches: Vertex[]) {
+        if (stitches.length <= 1)
+            return stitches;
+
+        const globalOrder = new Map<Vertex, number>();
+        this.sortedLayers.flat().forEach((v, index) => globalOrder.set(v, index));
+        const sorted = stitches.toSorted((a, b) => {
+            const idxA = globalOrder.get(a) ?? 0;
+            const idxB = globalOrder.get(b) ?? 0;
+            return idxA > idxB ? -1 : 1;
+        })
+        return sorted;
+    }
+
+    private getSortedLayers() {
+        const sorted = this.sortNodes( true);
         if (sorted.length < 1)
             return [];
         const layered = [];

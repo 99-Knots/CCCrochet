@@ -1,10 +1,10 @@
 import stitchSymbols from "./assets/stitchSymbols.json"
 
-export type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring";
+export type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring" | "support";
 
 export class StitchType {
     type: Stitch = "ch";
-    category: "ring" | "insert" | "terminal";
+    category: "ring" | "insert" | "terminal" | "support";
     symbol?: {symbol: string, fill?: boolean, bar?: boolean, height: number};
 
     constructor(type: Stitch) {
@@ -27,6 +27,10 @@ export class StitchType {
                 this.category = "ring"
                 break;
             }
+            case "support": {
+                this.category = "support"
+                break;
+            }
         }
         if(this.type in stitchSymbols)
             this.symbol = (stitchSymbols as any)[this.type];
@@ -41,7 +45,8 @@ export const StitchTypes = {
     DC: new StitchType("dc"),
     TR: new StitchType("tr"),
     HL: new StitchType("hole"),
-    MC: new StitchType("ring")
+    MC: new StitchType("ring"),
+    SP: new StitchType("support")
 }
 
 
@@ -82,7 +87,7 @@ export const Modifiers = {
 };
 
 
-export type EdgeType = "prev" | "slst" | "insert" | "surround";
+export type EdgeType = "prev" | "slst" | "insert" | "surround" | "support" | "simInsert";
 
 export class Edge {
     target: Vertex;
@@ -90,24 +95,32 @@ export class Edge {
     type: EdgeType;
     mod: Modifier;
     length: number = 1;
+    doRender: boolean = true;
 
     constructor(from: Vertex, to: Vertex, type: EdgeType, mod: Modifier) {
         this.target = to;
         this.source = from;
         this.type = type;
         this.mod = mod;
+        const height = this.source.type.symbol?.height;
         switch(this.type) {
             case "prev":
-                this.length = 0.5;
+                this.length = 0.8;
                 break;
             case "insert":
-                this.length = this.source.type.symbol?.height ?? 1;
+                this.length = height ?? 1;
+                break;
+            case "simInsert":
+                this.length = height ? height/2 : 0.5;
                 break;
             case "slst":
                 this.length = 0.5;
                 break;
             case "surround":
-                this.length = 0.1;
+                this.length = 0.5;
+                break;
+            case "support":
+                this.length = 0.0;
                 break;
         }
         this.length += this.mod.symbol?.height ?? 0;
@@ -118,6 +131,7 @@ export class Vertex {
     id: string;
     layer: number;
     type: StitchType;
+    doRender: boolean = true;
     
     x?: number;
     y?: number;
@@ -168,5 +182,13 @@ export class Hole extends Vertex {
 
     serialize(edges: Edge[]) {
         return `${this.size}ch${this.labelSymbol(edges)}`;
+    }
+}
+
+export class Support extends Vertex {
+    interpolationDiff: number = 0;
+    
+    constructor(supportedId: string, layer: number) {
+        super(supportedId + "-support", StitchTypes.SP, layer);
     }
 }

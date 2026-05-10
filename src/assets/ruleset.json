@@ -43,15 +43,6 @@
             "weight": 1
         },
         {
-            "name": "decrease-right",
-            "category": "insert",
-            "consume": [0, -1],
-            "produce": [
-                {"type": "sc"}
-            ],
-            "weight": 1
-        },
-        {
             "name": "hole",
             "category": "insert",
             "consume": [0],
@@ -60,7 +51,7 @@
                 {"type": "hole", "size": 2},
                 {"type": "sc"}
             ],
-            "weight": 0
+            "weight": 2
         }
     ],
     "mod-rules": [

@@ -9,10 +9,7 @@ function generatePattern(numRows: number) {
     const pat = new CG.Pattern();
     //let h = pat.startChain(5);
 
-    let l = pat.addRow([pat.firstStitchID]);
-    for (let j = 0; j < numRows; j++)
-        l = pat.addRow(l);
-    return pat;
+    return pat.generate(numRows);
 }
 
 function createRenderer(canvas: HTMLElement) {
@@ -35,8 +32,8 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, color
 
 //const pattern = document.getElementById("pattern")!;
 
-let numSamples = 4;
-let numRows = 6;
+let numSamples = 1;
+let numRows = 4;
 
 const canvas = document.getElementById("canvas")!;
 const patternList: CG.Pattern[] = [];
