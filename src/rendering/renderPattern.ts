@@ -6,6 +6,7 @@ import { zoom } from 'd3-zoom';
 
 const svgNamespace = "http://www.w3.org/2000/svg";
 
+
 export function setupZoom(svgElement: SVGSVGElement, contentGroup: SVGGElement) {
     const zoomBehavior = zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 10])

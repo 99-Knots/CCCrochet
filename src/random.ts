@@ -37,7 +37,7 @@ export function selectWeightedRandom(rules: {weight: number}[]) {
         total += r.weight;
     }
     const rand = random();
-    console.log(rand);
+    //console.log(rand);
     const selection = rand * total;
     let cumulative = 0;
     for(let i=0; i<rules.length; i++) {
