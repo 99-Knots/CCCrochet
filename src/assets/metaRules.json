@@ -1,0 +1,11 @@
+{
+    "stitch": [
+        {"type": "sc"},
+        {"type": "hdc"},
+        {"type": "dc"},
+        {"type": "tr"}
+    ],
+
+    "hole": {
+    }
+}

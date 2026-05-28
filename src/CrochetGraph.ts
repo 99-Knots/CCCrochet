@@ -2,6 +2,7 @@ import ruleset from "./assets/ruleset.json";
 import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
 import {Edge, Vertex, Hole, Support, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 import { forceCollinearSupport } from "./forces";
+import { selectWeightedRandom } from "./random";
 
 
 export class Pattern {
@@ -9,6 +10,7 @@ export class Pattern {
     vertices: Map<string, Vertex> = new Map();
     private currentRow: number = 0;
     firstStitchID: string;
+    baseRadius: number = 0;
     private prevMap = new Map<Vertex, Vertex>();    // mapping stitch to previous one
     private nextMap = new Map<Vertex, Vertex>();    // mapping stitch to following one
 
@@ -17,14 +19,19 @@ export class Pattern {
 
     private sortedLayers: (Vertex[])[] = [];
 
-    constructor(firstStitch?: Vertex) {
-        if(!firstStitch)
-            firstStitch = new Vertex("0", StitchTypes.MC, 0);
-        firstStitch.fx = 0;
-        firstStitch.fy = 0;
-        firstStitch.fz = 0;
-        this.firstStitchID = firstStitch.id;
-        this.addVertex(firstStitch);
+    constructor(startLayout?: 0 | 1) {
+        if(!startLayout){
+            const firstStitch = new Vertex("0", StitchTypes.MC, 0);
+            firstStitch.fx = 0;
+            firstStitch.fy = 0;
+            firstStitch.fz = 0;
+            this.firstStitchID = firstStitch.id;
+            this.addVertex(firstStitch);
+        }
+        else{
+            const hole = this.startChain(12)!;
+            this.firstStitchID = hole.id;
+        }
     }
 
     private addVertex(v: Vertex) {
@@ -46,20 +53,26 @@ export class Pattern {
         this.addVertex(firstCh);
         let lastID = firstCh.id;
         const hole = new Hole("h0", 0, n);
-        this.addVertex(hole)
-        for(let i=1;i<n;i++) {
+        this.addVertex(hole);
+        this.addEdge(firstCh.id, hole.id, "surround");
+        const chains = [firstCh];
+        for(let i=1; i<n; i++) {
             const ch = new Vertex(String(i), StitchTypes.CH, 0);
             this.addVertex(ch);
-            this.addEdge(lastID, ch.id, "prev")
+            this.addEdge(lastID, ch.id, "prev");
             this.addEdge(ch.id, hole.id, "surround");
             lastID = ch.id;
+            chains.push(ch);
         }
+        
         this.addEdge(lastID, firstCh.id, "slst");
+        arrangeRadially(chains, n/(2*Math.PI)*20, true);
         return hole;
     }
 
     generate(numRows: number) {
         let l = this.addRow([this.firstStitchID]);
+        console.log("row", l);
         for (let j = 0; j < numRows; j++)
             l = this.addRow(l);
 
@@ -99,6 +112,7 @@ export class Pattern {
             const currentPrev = this.vertices.get(previousRowIDs[i]);
 
             if(currentPrev) {
+                console.log(this.currentRow, currentPrev)
                 // get all rules that can be applied to the current stitch
                 const rules = ruleset["nr-rules"].filter( r => r["category"]==currentPrev.type.category);
                 const index = selectWeightedRandom(rules);
@@ -145,7 +159,6 @@ export class Pattern {
         }
         return newIDs;
     }
-
 
     private processHoles() {
         //const stitches = this.sortedLayers.flat();
@@ -200,7 +213,6 @@ export class Pattern {
 
     private addHole(hole: Hole, idBefore: string, idAfter: string) {
         // TODO: remove need for before and after?
-        // TODO: process holes differently, establish links between chains and inserted stitches, adjust if and how they affect each other in the force directed layout -> new edgetype
         const before = this.vertices.get(idBefore);
         const after = this.vertices.get(idAfter);
         if(before && after){
@@ -247,13 +259,6 @@ export class Pattern {
     }
 
     force3D() {
-        const firstStitch = this.vertices.get(this.firstStitchID);
-        if(firstStitch) {
-            firstStitch.fx = 0;
-            firstStitch.fy = 0;
-            // don't lock z to allow the tail end to get "pushed put"
-        }
-        
         // initiate with radial layout to reduce twists and crossings
         const stretchFactor = 8;
         const layers = this.sortedLayers;
@@ -306,11 +311,7 @@ export class Pattern {
         const stretchFactor = 8;
         const layers = this.sortedLayers;
         for (const l of layers) {
-            const angle = 2*Math.PI / l.length;
-            l.forEach( (v, index) => {
-                v.x = v.layer*stretchFactor*2 * Math.cos(index * angle); 
-                v.y = v.layer*stretchFactor*2 * Math.sin(index * angle);
-            });
+            arrangeRadially(l, stretchFactor*2 * l[0].layer)
         }
         
         const supportVerts = Array.from(this.vertices.values()).filter(v => v.type == StitchTypes.SP);
@@ -349,12 +350,12 @@ export class Pattern {
         const stitches = Array.from(this.vertices.values());
 
         // 
-        const stitchSet = new Set(stitches);
+        const stitchSet = new Set(stitches);    // leftover from 
         const sorted = new Set<Vertex>();
 
         // find the first stitch by finding the one with no previous one
         let current = stitches.find( s => {
-            const prev = this.prevMap.get(s); 
+            const prev = this.prevMap.get(s);
             return !prev || !stitchSet.has(prev);   // either no prev at all or prev not in 
         });
 
@@ -365,7 +366,12 @@ export class Pattern {
                 holes.forEach( h => sorted.add(h.target));
             }
             sorted.add(current);
-            current = this.nextMap.get(current);
+            if(current instanceof Hole)
+                current = this.edges.filter( e=> e.type == "surround" && e.target == current).find(e => {
+                    const prev = this.prevMap.get(e.source); 
+                    return !prev || !stitchSet.has(prev);})?.source
+            else
+                current = this.nextMap.get(current);
         }
         return Array.from(sorted);
     }
@@ -408,17 +414,20 @@ export class Pattern {
 
 
 
-function selectWeightedRandom(rules: {weight: number}[]) {
-    let total = 0;
-    for(const r of rules) {
-        total += r.weight;
-    }
-    const selection = Math.random() * total;
-    let cumulative = 0;
-    for(let i=0; i<rules.length; i++) {
-        cumulative += rules[i].weight;
-        if(cumulative >= selection) {
-            return i;
+function arrangeRadially(vertices: Vertex[], radius: number, fix?: boolean) {
+    const angle = 2*Math.PI / vertices.length;
+    vertices.forEach( (v, index) => {
+        if (fix) {
+            v.fx = radius * Math.cos(index * angle); 
+            v.fy = radius * Math.sin(index * angle);
+            v.fz = 0;
         }
-    }
+        else
+        {
+            v.x = radius * Math.cos(index * angle); 
+            v.y = radius * Math.sin(index * angle);
+            v.z = 0;
+        }
+    });
+
 }

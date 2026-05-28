@@ -15,7 +15,43 @@
             "weight": 1
         },
         {
-            "name": "flat",
+            "name": "magic-circle-hdc",
+            "category": "ring",
+            "consume": [0],
+            "produce": [
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"},
+                {"type": "hdc"}
+            ],
+            "weight": 1
+        },
+        {
+            "name": "magic-circle-dc",
+            "category": "ring",
+            "consume": [0],
+            "produce": [
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"},
+                {"type": "dc"}
+            ],
+            "weight": 1
+        },
+        {
+            "name": "flat-sc",
             "category": "insert",
             "consume": [0],
             "produce": [
@@ -24,7 +60,25 @@
             "weight": 2
         },
         {
-            "name": "increase",
+            "name": "flat-hdc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {"type": "hdc"}
+            ],
+            "weight": 2
+        },
+        {
+            "name": "flat-dc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {"type": "dc"}
+            ],
+            "weight": 2
+        },
+        {
+            "name": "increase-sc",
             "category": "insert",
             "consume": [0],
             "produce": [
@@ -32,6 +86,26 @@
                 {"type": "sc"}
             ],
             "weight": 3
+        },
+        {
+            "name": "increase-hdc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {"type": "hdc"},
+                {"type": "sc"}
+            ],
+            "weight": 2
+        },
+        {
+            "name": "increase-dc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {"type": "hdc"},
+                {"type": "hdc"}
+            ],
+            "weight": 1
         },
         {
             "name": "decrease-left",
@@ -51,7 +125,7 @@
                 {"type": "hole", "size": 2},
                 {"type": "sc"}
             ],
-            "weight": 2
+            "weight": 1
         }
     ],
     "mod-rules": [

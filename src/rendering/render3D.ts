@@ -53,7 +53,7 @@ export class GraphScene {
         const ambient = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambient);
 
-        this.light = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.light = new THREE.DirectionalLight(0xffffff, 1.0);
         this.light.position.set(10, 10, 10);
         this.scene.add(this.light);
     }
@@ -92,7 +92,7 @@ export class GraphScene {
         private createEdges(edges: Edge[]) {
         const geometry = sharedResources.cylinderGeo;
         for (const e of edges) {
-            if(!(e.type == "insert" || e.type == "prev" || e.type == "simInsert"))
+            if(!(e.type == "insert" || e.type == "prev" || e.type == "simInsert" || e.type == "slst"))
                 continue;
             const a = this.nodeMeshMap.get(e.target.id);
             const b = this.nodeMeshMap.get(e.source.id);
