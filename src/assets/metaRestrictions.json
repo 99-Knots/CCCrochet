@@ -4,5 +4,12 @@
         { "value": "hdc", "weight": 2 },
         { "value": "dc", "weight": 2 },
         { "value": "tr", "weight": 1 }
+    ],
+    "modifiers": [
+        { "type": "", "position": "f", "weight": 4 },
+        { "type": "l", "position": "f", "weight": 1 },
+        { "type": "l", "position": "b", "weight": 1 },
+        { "type": "p", "position": "f", "weight": 1 },
+        { "type": "p", "position": "b", "weight": 1 }
     ]
 }

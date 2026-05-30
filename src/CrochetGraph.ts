@@ -162,7 +162,9 @@ export class Pattern {
                         }
 
                         for(const p of parents) {
-                            this.addEdge(stitch.id, p.id, "insert");
+                            const mod = r.produce[k].modifier;
+
+                            this.addEdge(stitch.id, p.id, "insert", new Modifier(mod?.type, mod?.position));
                         }
                         previousID = stitch.id;
                     } 

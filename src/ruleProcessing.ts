@@ -2,9 +2,11 @@ import restrictions from "./assets/metaRestrictions.json";
 import { type Stitch } from "./Stitches"
 import * as random from "./random"
 
+type RuleStitchMod = {type: "" | "l" | "p", position: "f" | "b"}
 type RuleStitch = {
     topology: "simple" | "decrease" | "chain",
     type: Stitch,
+    modifier?: RuleStitchMod,
     into: number[],
     parameters: {
         size?: number
@@ -36,6 +38,15 @@ function selectStitchType(): Stitch {
         return options[idx].value as Stitch;
     else
         return "sc";    // just as a backup default, should never be needed
+}
+
+function selectStitchModifier(): RuleStitchMod {
+    const options = restrictions["modifiers"];
+    const idx = random.selectWeightedRandom(options);
+    if(idx !== undefined)
+        return options[idx] as RuleStitchMod;
+    else
+        return {type: "", position: "f"};    // just as a backup default, should never be needed
 }
 
 function createRingRule() {
@@ -90,6 +101,7 @@ function createFlatRule() {
     const stitch: RuleStitch = {
         topology: "simple",
         type: selectStitchType(),
+        modifier: selectStitchModifier(),
         into: [0],
         parameters: {}
     };
@@ -103,11 +115,13 @@ function createFlatRule() {
 function createIncreaseRule() {
     const repeat = random.randInt(1, 4);
     const stitchType = selectStitchType();
+    const modifier = selectStitchModifier();
     const produce: RuleStitch[] = [];
     for(let i=0; i<repeat; i++) {
         const stitch: RuleStitch = {
             topology: "simple",
             type: stitchType,
+            modifier: modifier,
             into: [0],
             parameters: {}
         };
@@ -121,6 +135,7 @@ function createIncreaseRule() {
 function createDecreaseRule(maxLimit: number = 4) {
     const size = random.randInt(2, Math.min(maxLimit, 4));
     const stitchType = selectStitchType();
+    const modifier = selectStitchModifier();
     const consume: number[] = [];
     const into: number[] = [];
 
@@ -132,6 +147,7 @@ function createDecreaseRule(maxLimit: number = 4) {
     const stitch: RuleStitch = {
         topology: "decrease",
         type: stitchType,
+        modifier: modifier,
         into: into,
         parameters: {}
     }
@@ -143,16 +159,19 @@ function createDecreaseRule(maxLimit: number = 4) {
 function createHoleRule(maxLimit: number = 4) {
     const consume = [0, random.randInt(0, Math.min(maxLimit, 4))];
     const stitchType = selectStitchType();
+    const modifier = selectStitchModifier();
     const size = random.randInt(0, 5);
     const left: RuleStitch = {
         topology: "simple",
         type: stitchType,
+        modifier: modifier,
         into: [0],
         parameters: {}
     };
     const right: RuleStitch = {
         topology: "simple",
         type: stitchType,
+        modifier: modifier,
         into: [1],
         parameters: {}
     };
