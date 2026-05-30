@@ -31,6 +31,16 @@ export function getSeed() {
     return seed;
 }
 
+export function randInt(min: number, max: number) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    let rand = random();
+    rand *= (max-min + 1);
+    rand = Math.floor(rand);
+    rand += min;
+    return rand;
+}
+
 export function selectWeightedRandom(rules: {weight: number}[]) {
     let total = 0;
     for(const r of rules) {

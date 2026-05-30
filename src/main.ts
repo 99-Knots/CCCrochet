@@ -3,7 +3,7 @@ import * as CG from './CrochetGraph.ts'
 import { GraphRenderer } from './rendering/render3D.ts';
 import { drawToSVG } from './rendering/renderPattern.ts';
 import * as random from './random.ts';
-import { rand } from 'three/tsl';
+import {} from './ruleProcessing.ts'
 
 
 function generatePattern(numRows: number) {
@@ -11,6 +11,16 @@ function generatePattern(numRows: number) {
     //let h = pat.startChain(5);
 
     return pat.generate(numRows);
+}
+
+async function generateSamples(numSamples: number) {
+    patternList = [];
+    for (let i = 0; i < numSamples; i++) {
+        console.log(`iteration: ${i} seed: ${random.getSeed()}`);
+        const pat = generatePattern(numRows);
+        const rend = await renderPattern(pat, renderer, "#7A5292");
+        patternList.push(pat);
+    }
 }
 
 function createRenderer(canvas: HTMLElement) {
@@ -41,22 +51,20 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, color
 
 //const pattern = document.getElementById("pattern")!;
 
-let numSamples = 1;
-let numRows = 4;
+let numRows = 3;
 
 const svg = document.querySelector("#vis-pattern") as SVGSVGElement;
 document.getElementById("copy-btn")?.addEventListener("click", (e => {
     copySVG(svg);
-}))
+}));
+
+const seedBtn = document.getElementById("seed-btn")?.addEventListener("click", (async e => {
+    random.setSeed("hook");
+    await generateSamples(1);
+}));
 const canvas = document.getElementById("canvas")!;
-const patternList: CG.Pattern[] = [];
+let patternList: CG.Pattern[] = [];
 
 const renderer = createRenderer(canvas);
-for (let i = 0; i < numSamples; i++) {
-    console.log(`iteration: ${i} seed: ${random.getSeed()}`);
-    const pat = generatePattern(numRows);
-    const rend = await renderPattern(pat, renderer, "#7A5292");
-    patternList.push(pat);
-    //rendererList.push(rend);
-}
+await generateSamples(1);
 

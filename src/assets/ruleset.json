@@ -129,7 +129,145 @@
         }
     ],
     "mod-rules": [
-
+         {
+            "name": "magic-circle-sc",
+            "category": "ring",
+            "consume": [0],
+            "produce": [
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                }
+            ],
+            "weight": 1
+        },
+        {
+            "name": "flat-sc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                }
+            ],
+            "weight": 2
+        },
+        {
+            "name": "increase-sc",
+            "category": "insert",
+            "consume": [0],
+            "produce": [
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                }
+            ],
+            "weight": 3
+        },
+        {
+            "name": "decrease-left",
+            "category": "insert",
+            "consume": [0, 1],
+            "produce": [
+                {
+                    "topology": "decrease",
+                    "type": "sc",
+                    "into": [0, 1],
+                    "parameters": { 
+                    }
+                }
+            ],
+            "weight": 1
+        },
+        {
+            "name": "hole",
+            "category": "insert",
+            "consume": [0, 0],
+            "produce": [
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [0],
+                    "parameters": {
+                    }
+                },
+                {
+                    "topology": "chain",
+                    "type": "ch",
+                    "into": [],
+                    "parameters": {
+                        "size": 2
+                    }
+                },
+                {
+                    "topology": "simple",
+                    "type": "sc",
+                    "into": [1],
+                    "parameters": {
+                    }
+                }
+            ],
+            "weight": 1
+        }
     ],
     "type-rules": [
 

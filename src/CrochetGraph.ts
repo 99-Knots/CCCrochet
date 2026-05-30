@@ -1,8 +1,8 @@
-import ruleset from "./assets/ruleset.json";
 import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
 import {Edge, Vertex, Hole, Support, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 import { forceCollinearSupport } from "./forces";
 import { selectWeightedRandom } from "./random";
+import { createRuleset, Rule } from "./ruleProcessing";
 
 
 export class Pattern {
@@ -18,6 +18,7 @@ export class Pattern {
     private insertMap = new Map<Vertex, {child: Vertex, edge: Edge}[]>();   // all stitches inserted into a given stitch
 
     private sortedLayers: (Vertex[])[] = [];
+    rowRulesets: Rule[][] = [];
 
     constructor(startLayout?: 0 | 1) {
         if(!startLayout){
@@ -71,10 +72,16 @@ export class Pattern {
     }
 
     generate(numRows: number) {
+        const rowRules = createRuleset(1, 0);
+        this.rowRulesets.push(rowRules);
         let l = this.addRow([this.firstStitchID]);
         //console.log("row", l);
-        for (let j = 0; j < numRows; j++)
+        for (let j = 0; j < numRows; j++) {
+            const rowRules = createRuleset(10, j);
+            this.rowRulesets.push(rowRules);
+            console.log("row rules", this.rowRulesets, rowRules);
             l = this.addRow(l);
+        }
 
 
         this.edges.filter( e => e.type === "prev").forEach( e => { 
@@ -107,32 +114,35 @@ export class Pattern {
         const newIDs: string[] = [];
         let previousID: string = previousRowIDs[previousRowIDs.length-1];
 
-        // iterate over every stitch in prev row
-        for(let i=0; i<previousRowIDs.length; i++) {
+        // iterate along stitches in prev row
+        let i = 0;
+        while(i < previousRowIDs.length) {
             const currentPrev = this.vertices.get(previousRowIDs[i]);
 
             if(currentPrev) {
-                //console.log(this.currentRow, currentPrev)
-                // get all rules that can be applied to the current stitch
-                const rules = ruleset["nr-rules"].filter( r => r["category"]==currentPrev.type.category);
-                const index = selectWeightedRandom(rules);
-                if(index !== undefined) {
-                    const r = rules[index];
+                // only consider rules that are applicable and do not use mor stitches than are available in the previous row
+                // TODO: why was this not a problem before? -> probably because creating parent list directly from consumes, so no need to verify all were picked
+                // -> every ruleset requires at least one rule that only consumes one stitch!
+                console.log(this.rowRulesets);
+                const newRules = this.rowRulesets[this.rowRulesets.length-1].filter( r => r["category"] == currentPrev.type.category && (i+Math.max(...r["consume"]) < previousRowIDs.length) );
+                const idx = selectWeightedRandom(newRules);
+                if(idx !== undefined) {
+                    const r = newRules[idx];
+                    const maxConsume = Math.max(...r["consume"]);
 
-                    // get all stitches the new one gets worked into
-                    const parents: Vertex[] = [];
+                    // get all stitches the new ones gets worked into
+                    const consumes: Vertex[] = [];
                     for(const c of r.consume) {
-                        const p =this.vertices.get(previousRowIDs[i+c])
-                        if(p)
-                            parents.push(p)
+                        const stitch = this.vertices.get(previousRowIDs[i+c])
+                        if(stitch)
+                            consumes.push(stitch)
                     }
 
-                    // go over all stitches created by the chosen rule
-                    for(let k=0;k<r.produce.length;k++) {
+                    for(let k=0; k<r.produce.length; k++) {
                         const produce = r.produce[k];
                         let stitch: Vertex;
-                        if(produce.type == "hole" && produce.size !== undefined)
-                            stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.size);
+                        if(produce.topology == "chain" && produce.parameters.size !== undefined)
+                            stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.parameters.size);
                         else
                             stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
                         this.addVertex(stitch);
@@ -144,11 +154,19 @@ export class Pattern {
                         // TODO: how to adapt this for holes?
                         if(previousID)
                             this.addEdge(stitch.id, previousID, "prev");
+                        
+                        // find parents of an individual stitch
+                        const parents: Vertex[] = [];
+                        for(const c of produce.into) {
+                            parents.push(consumes[c]);
+                        }
+
                         for(const p of parents) {
                             this.addEdge(stitch.id, p.id, "insert");
                         }
                         previousID = stitch.id;
-                    }                    
+                    } 
+                    i += maxConsume + 1; // go to next free stitch        
                 }
             }
         }

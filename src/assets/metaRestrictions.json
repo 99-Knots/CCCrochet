@@ -1,0 +1,8 @@
+{
+    "stitchTypes": [
+        { "value": "sc", "weight": 3 },
+        { "value": "hdc", "weight": 2 },
+        { "value": "dc", "weight": 2 },
+        { "value": "tr", "weight": 1 }
+    ]
+}
