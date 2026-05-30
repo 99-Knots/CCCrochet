@@ -1,6 +1,6 @@
 import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
 import {Edge, Vertex, Hole, Support, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
-import { forceCollinearSupport } from "./forces";
+import { forceCollinearSupport, forceAngularOrder } from "./forces";
 import { selectWeightedRandom } from "./random";
 import { createRuleset, Rule } from "./ruleProcessing";
 
@@ -126,50 +126,48 @@ export class Pattern {
                 console.log(this.rowRulesets);
                 const newRules = this.rowRulesets[this.rowRulesets.length-1].filter( r => r["category"] == currentPrev.type.category && (i+Math.max(...r["consume"]) < previousRowIDs.length) );
                 const idx = selectWeightedRandom(newRules);
-                if(idx !== undefined) {
-                    const r = newRules[idx];
-                    const maxConsume = Math.max(...r["consume"]);
+                const r = newRules[idx];
+                const maxConsume = Math.max(...r["consume"]);
 
-                    // get all stitches the new ones gets worked into
-                    const consumes: Vertex[] = [];
-                    for(const c of r.consume) {
-                        const stitch = this.vertices.get(previousRowIDs[i+c])
-                        if(stitch)
-                            consumes.push(stitch)
+                // get all stitches the new ones gets worked into
+                const consumes: Vertex[] = [];
+                for(const c of r.consume) {
+                    const stitch = this.vertices.get(previousRowIDs[i+c])
+                    if(stitch)
+                        consumes.push(stitch)
+                }
+
+                for(let k=0; k<r.produce.length; k++) {
+                    const produce = r.produce[k];
+                    let stitch: Vertex;
+                    if(produce.topology == "chain" && produce.parameters.size !== undefined)
+                        stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.parameters.size);
+                    else
+                        stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
+                    this.addVertex(stitch);
+
+                    // TODO: see if continue to skip chains etc or if check in next iter before rule application
+                    if(stitch.type.category == "insert")
+                        newIDs.push(stitch.id);
+
+                    // TODO: how to adapt this for holes?
+                    if(previousID)
+                        this.addEdge(stitch.id, previousID, "prev");
+                    
+                    // find parents of an individual stitch
+                    const parents: Vertex[] = [];
+                    for(const c of produce.into) {
+                        parents.push(consumes[c]);
                     }
 
-                    for(let k=0; k<r.produce.length; k++) {
-                        const produce = r.produce[k];
-                        let stitch: Vertex;
-                        if(produce.topology == "chain" && produce.parameters.size !== undefined)
-                            stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.parameters.size);
-                        else
-                            stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
-                        this.addVertex(stitch);
+                    for(const p of parents) {
+                        const mod = r.produce[k].modifier;
 
-                        // TODO: see if continue to skip chains etc or if check in next iter before rule application
-                        if(stitch.type.category == "insert")
-                            newIDs.push(stitch.id);
-
-                        // TODO: how to adapt this for holes?
-                        if(previousID)
-                            this.addEdge(stitch.id, previousID, "prev");
-                        
-                        // find parents of an individual stitch
-                        const parents: Vertex[] = [];
-                        for(const c of produce.into) {
-                            parents.push(consumes[c]);
-                        }
-
-                        for(const p of parents) {
-                            const mod = r.produce[k].modifier;
-
-                            this.addEdge(stitch.id, p.id, "insert", new Modifier(mod?.type, mod?.position));
-                        }
-                        previousID = stitch.id;
-                    } 
-                    i += maxConsume + 1; // go to next free stitch        
-                }
+                        this.addEdge(stitch.id, p.id, "insert", new Modifier(mod?.type, mod?.position));
+                    }
+                    previousID = stitch.id;
+                } 
+                i += maxConsume + 1; // go to next free stitch
             }
         }
         for(let l=1; l<newIDs.length-1; l++) {
@@ -342,7 +340,7 @@ export class Pattern {
                 switch (e.type) {
                     case "simInsert":
                     case "insert": return 1.0;
-                    case "surround": return 0.8;
+                    case "surround": return 0.3;
                     case "prev": return 0.3;
                     case "support": return 0.0;
                     default: return 0.1;
@@ -352,6 +350,7 @@ export class Pattern {
             .force("collide", forceCollide().radius(1))
             .force("radial", forceRadial<Vertex>(v => v.layer*stretchFactor, 0, 0).strength(0.5))
             .force("supports", forceCollinearSupport(this.edges))
+            .force("angularOrder", forceAngularOrder(this.prevMap, this.nextMap, 0.4))
             .stop();
 
         simulation.alpha(0.5);

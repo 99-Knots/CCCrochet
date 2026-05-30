@@ -1,4 +1,4 @@
-import { Edge, Vertex, Support } from "./Stitches"
+import { Edge, Vertex, Support, Hole } from "./Stitches"
 
 
 export function forceCollinearSupport(edges: Edge[]) {
@@ -69,6 +69,90 @@ export function forceCollinearSupport(edges: Edge[]) {
             }
         }
     };
+
+    return force;
+}
+
+
+
+
+export function forceAngularOrder(prevMap: Map<Vertex, Vertex>, nextMap: Map<Vertex, Vertex>, strength: number = 0.3) {
+
+    // list of vertices in prev-next order per layer
+    let layerVertices = new Map<number, Vertex[]>();
+
+    function computeCentroid(verts: Vertex[]) {
+        let cx = 0;
+        let cy = 0;
+        let count = 0;
+        for (const v of verts) {
+            if (v.x !== undefined && v.y !== undefined) {
+                cx += v.x; 
+                cy += v.y; 
+                count++;
+            }
+        }
+        return count > 0 ? { cx: cx / count, cy: cy / count } : { cx: 0, cy: 0 };
+    }
+
+    // Normalise an angle to [-PI, PI]
+    function normaliseAngle(a: number): number {
+        while (a > Math.PI)  a -= 2 * Math.PI;
+        while (a < -Math.PI) a += 2 * Math.PI;
+        return a;
+    }
+
+    force.initialize = function(nodes: Vertex[]) {
+        layerVertices = new Map();
+        for (const v of nodes) {
+            if (v instanceof Hole || v instanceof Support) continue;
+            const list = layerVertices.get(v.layer) ?? [];
+            list.push(v);
+            layerVertices.set(v.layer, list);
+        }
+    };
+
+    function force(alpha: number) {
+        const centroids = new Map<number, {cx: number, cy: number}>();
+
+        for (const [v, next] of nextMap) {
+            if (v instanceof Hole || v instanceof Support) continue;
+            const prev = prevMap.get(v);
+            if (!prev || !next) continue;  // row-end stitches, skip
+            if (v.x === undefined || v.y === undefined) continue;
+            if (prev.x === undefined || prev.y === undefined) continue;
+            if (next.x === undefined || next.y === undefined) continue;
+
+            if (!centroids.has(v.layer)) {
+                const layerVerts = layerVertices.get(v.layer) ?? [];
+                centroids.set(v.layer, computeCentroid(layerVerts));
+            }
+            const { cx, cy } = centroids.get(v.layer)!;
+
+            const anglePrev = Math.atan2(prev.y - cy, prev.x - cx);
+            const angleNext = Math.atan2(next.y - cy, next.x - cx);
+            const angleSelf = Math.atan2(v.y - cy, v.x - cx);
+
+            let neighbourSpan = normaliseAngle(angleNext - anglePrev);
+            let currentSpan = normaliseAngle(angleSelf - anglePrev);
+
+            // If the neighbours have crossed, push middle slightly towards positive to help untangle
+            if (neighbourSpan < 0.01) neighbourSpan = 0.01;
+
+            const targetAngle = normaliseAngle(anglePrev + neighbourSpan * 0.5);
+
+            // if not already in-between the neighbours push towards their middle
+            if (currentSpan < 0 || currentSpan > neighbourSpan) {
+                const r = Math.sqrt((v.x - cx) ** 2 + (v.y - cy) ** 2) || 1;
+                const targetX = cx + r * Math.cos(targetAngle);
+                const targetY = cy + r * Math.sin(targetAngle);
+
+                v.vx = (v.vx ?? 0) + (targetX - v.x) * strength * alpha;
+                v.vy = (v.vy ?? 0) + (targetY - v.y) * strength * alpha;
+
+            }
+        }
+    }
 
     return force;
 }

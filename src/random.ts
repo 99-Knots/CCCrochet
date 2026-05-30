@@ -41,19 +41,20 @@ export function randInt(min: number, max: number) {
     return rand;
 }
 
-export function selectWeightedRandom(rules: {weight: number}[]) {
+export function selectWeightedRandom(options: {weight: number}[]) {
     let total = 0;
-    for(const r of rules) {
+    for(const r of options) {
         total += r.weight;
     }
     const rand = random();
     //console.log(rand);
     const selection = rand * total;
     let cumulative = 0;
-    for(let i=0; i<rules.length; i++) {
-        cumulative += rules[i].weight;
+    for(let i=0; i<options.length; i++) {
+        cumulative += options[i].weight;
         if(cumulative >= selection) {
             return i;
         }
     }
+    return 0;
 }
