@@ -29,6 +29,7 @@ function drawSymbol(vertex: Vertex,
         const angle = Math.atan2(dy, dx) * (180 / Math.PI) - 90;
         //console.log(vertex.type)
         path.setAttribute("fill", symbol.fill ? "#000" : "none");
+        path.setAttribute("stroke", (vertex.layer % 2 == 1) ? "#000": "#666");
         
         const scale = distance / 100;
 
@@ -91,6 +92,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 angleAvg /= (inserts.length??1);
                 const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angleAvg}) scale(0.05, ${scaleAvg}) translate(-50, -5)`;
                 bar.setAttribute("transform", transform);
+                bar.setAttribute("stroke", (v.layer % 2 == 1) ? "#000": "#666");
                 stitches.appendChild(bar);
             }
         }
@@ -111,6 +113,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 //console.log("x, y:", v.x, v.y, "\nangle:", angle, "\nscale:", scale);
                 const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angle}) scale(${scale})  translate(-50, -50)`;
                 path.setAttribute("transform", transform);
+                path.setAttribute("stroke", (v.layer % 2 == 1) ? "#000": "#666");
                 stitches.appendChild(path)
             }
         }
@@ -119,6 +122,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
             const symbol = drawSymbol(v, {parent: e.target, edge: e})
             if (symbol){
                 stitches.appendChild(symbol.path);
+                // draw slsts
                 const path = document.createElementNS(svgNamespace, "line");
                 path.setAttribute("x1", `${e.source.x ?? 0}`);
                 path.setAttribute("y1", `${e.source.y ?? 0}`);

@@ -79,7 +79,7 @@ export class Pattern {
         for (let j = 0; j < numRows; j++) {
             const rowRules = createRuleset(10, j);
             this.rowRulesets.push(rowRules);
-            console.log("row rules", this.rowRulesets, rowRules);
+            //console.log("row rules", this.rowRulesets, rowRules);
             l = this.addRow(l);
         }
 
@@ -123,7 +123,7 @@ export class Pattern {
                 // only consider rules that are applicable and do not use mor stitches than are available in the previous row
                 // TODO: why was this not a problem before? -> probably because creating parent list directly from consumes, so no need to verify all were picked
                 // -> every ruleset requires at least one rule that only consumes one stitch!
-                console.log(this.rowRulesets);
+                //console.log(this.rowRulesets);
                 const newRules = this.rowRulesets[this.rowRulesets.length-1].filter( r => r["category"] == currentPrev.type.category && (i+Math.max(...r["consume"]) < previousRowIDs.length) );
                 const idx = selectWeightedRandom(newRules);
                 const r = newRules[idx];
@@ -341,14 +341,14 @@ export class Pattern {
                     case "simInsert":
                     case "insert": return 1.0;
                     case "surround": return 0.3;
-                    case "prev": return 0.3;
+                    case "prev": return 0.2;
                     case "support": return 0.0;
                     default: return 0.1;
                 }
             }).iterations(8))
             .force("charge", forceManyBody().strength(-10))
             .force("collide", forceCollide().radius(1))
-            .force("radial", forceRadial<Vertex>(v => v.layer*stretchFactor, 0, 0).strength(0.5))
+            .force("radial", forceRadial<Vertex>(v => v.layer*stretchFactor*3, 0, 0).strength(0.5))
             .force("supports", forceCollinearSupport(this.edges))
             .force("angularOrder", forceAngularOrder(this.prevMap, this.nextMap, 0.4))
             .stop();
