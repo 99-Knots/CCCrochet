@@ -129,7 +129,7 @@ export class GraphScene {
 
 export class GraphRenderer {
     private renderer: THREE.WebGLRenderer;
-    private container: HTMLElement;
+    //private container: HTMLElement;
     sizeFactor: number;
     scenes: GraphScene[] = [];
     private materialMap = new Map<THREE.ColorRepresentation, THREE.MeshStandardMaterial>();
@@ -143,7 +143,7 @@ export class GraphRenderer {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor( 0xffffff, 1 );
         container.appendChild(this.renderer.domElement);
-        this.container = container;
+        //this.container = container;
 
         this.renderer.setAnimationLoop( this.animate )
 

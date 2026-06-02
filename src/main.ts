@@ -127,7 +127,7 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     const toggleBtn = document.createElement("button");
     toggleBtn.innerHTML = `${chartIcon} Show Pattern`;
     toggleBtn.setAttribute("data-i18n", "toggleChart");
-    toggleBtn.addEventListener("click", e => {
+    toggleBtn.addEventListener("click", () => {
         chart.classList.toggle("hidden");
     });
 
@@ -143,7 +143,7 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
 
     const selectBtn = document.createElement("button");
     selectBtn.classList.add("select-btn");
-    selectBtn.addEventListener("click", e => {
+    selectBtn.addEventListener("click", () => {
         selectBtn.classList.toggle("selected");
         patternList[index].selected = selectBtn.classList.contains("selected");
         //console.log(patternList)
@@ -166,14 +166,14 @@ let numRows = 4;
 let numSamples = 6;
 let generation = 1;
 
-const seedBtn = document.getElementById("seed-btn")?.addEventListener("click", (async e => {
+const seedBtn = document.getElementById("seed-btn")?.addEventListener("click", (async () => {
     random.setSeed("hook");
     generation = 0;
     await geneticGeneration(generation);
 }));
 
 
-const genBtn = document.getElementById("gen-btn")?.addEventListener("click", (async e => {
+const genBtn = document.getElementById("gen-btn")?.addEventListener("click", (async () => {
     await geneticGeneration(generation);
     generation++;
 }));

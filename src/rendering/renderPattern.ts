@@ -109,7 +109,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                     
                 const dx = (prev?.x ?? 0) - (next.x ??0);
                 const dy = (prev?.y ?? 0) - (next.y ??0);
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                //const distance = Math.sqrt(dx * dx + dy * dy);
                 const angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 
                 //const scale = distance / 100;

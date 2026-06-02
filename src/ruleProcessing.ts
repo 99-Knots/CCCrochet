@@ -187,7 +187,7 @@ const mutations: Mutation[] = [
         weight: 2
     },
     {   // weight
-        getCandidates: (r) => {
+        getCandidates: (_r) => {
             return [{type: "weight"} as WeightCandidate];
         },
         apply: (r, candidate) => {
@@ -226,7 +226,7 @@ const crosses: Crossbreed[] = [
                 else return [];
             });
         },
-        apply: (r1, r2, candidate) => {
+        apply: (r1, _r2, candidate) => {
             if(candidate.type == "stitchType"){
                 const stitch = r1.produce[candidate.idx];
                 const options = Array.from(candidate.options);
@@ -259,7 +259,7 @@ const crosses: Crossbreed[] = [
                 else return [];
             })
         },
-        apply: (r1, r2, candidate) => {
+        apply: (r1, _r2, candidate) => {
             if(candidate.type == "modifier"){
                 const stitch = r1.produce[candidate.idx];
                 const options = Array.from(candidate.options);
@@ -296,7 +296,7 @@ const crosses: Crossbreed[] = [
         weight: 2
     },
     {   // weight
-        getCandidates: (r1, r2) => {
+        getCandidates: (_r1, _r2) => {
             return [{type: "weight"} as WeightCandidate];
         },
         apply: (r1, r2, candidate) => {
@@ -558,8 +558,6 @@ export function createRuleset(numRules: number, row: number) {
 }
 
 export function breedRulesets(parentGen: {ruleset: PatternRules, weight: number}[], numRows: number) {
-    
-    const children: Rule[][] = [];
     const child: PatternRules = [];
     const minNumFlatRules = 1;
     const minNumStartRules = 1;
