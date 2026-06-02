@@ -1,13 +1,12 @@
 import restrictions from "./assets/metaRestrictions.json";
-import { type Stitch } from "./Stitches"
+import { type Stitch, Modifier } from "./Stitches"
 import * as random from "./random"
-import { min } from "three/tsl";
 
 type RuleStitchMod = {type: "" | "l" | "p", position: "f" | "b"}
 type RuleStitch = {
     topology: "simple" | "decrease" | "chain",
     type: Stitch,
-    modifier?: RuleStitchMod,
+    modifier?: Modifier,
     into: number[],
     parameters: {
         size?: number
@@ -34,6 +33,43 @@ type Mutation = {
     weight: number
 }
 
+type CrossConsumeCandidate = { type: "consume" };
+type CrossStitchTypeCandidate = { type: "stitchType", idx: number, options: Set<Stitch> };
+type CrossModifierCandidate = { type: "modifier", idx: number, options: Set<Modifier> };
+type CrossHoleSizeCandidate = { type: "holeSize", idx1: number, idx2: number[] };
+type CrossWeightCandidate = { type: "weight" };
+
+type CrossbreedTarget = CrossConsumeCandidate 
+                      | CrossStitchTypeCandidate
+                      | CrossModifierCandidate
+                      | CrossHoleSizeCandidate
+                      | CrossWeightCandidate;
+
+type Crossbreed = {
+    getCandidates: (rule1: Rule, rule2: Rule) => CrossbreedTarget[],
+    apply: (rule1: Rule, rule2: Rule, candidate: CrossbreedTarget) => void,
+    weight: number
+};
+
+function getAllReplacableStitches(rule: Rule) {
+    return rule.produce.flatMap( (p, i) => {
+        if(p.topology !== "chain")
+            return [i];
+        else
+            return [];
+    });
+}
+
+function getAllExpandableChains(rule: Rule) {
+    return rule.produce.flatMap( (p, i) => {
+        if(p.topology === "chain" && p.parameters.size !== undefined)
+            return [i];
+        else
+            return [];
+    });
+}
+
+
 const mutations: Mutation[] = [
     {   // consume
         getCandidates: r => {
@@ -54,16 +90,9 @@ const mutations: Mutation[] = [
     },
     {   // stitch type
         getCandidates: r => {
-            r.produce.flatMap((p, i) =>
-            p.topology !== "chain"
-                ? [{ type: "stitchType", idx: i } as StitchTypeCandidate]
-                : []
-        )
-            return r.produce.flatMap( (p, i) => { 
-                if(p.topology !== "chain") 
-                    return [{type: "stitchType", idx: i} as StitchTypeCandidate]; 
-                else 
-                    return [];
+            const replaceableIdcs = getAllReplacableStitches(r);
+            return replaceableIdcs.flatMap( i => {
+                return [{type: "stitchType", idx: i} as StitchTypeCandidate];
             });
         },
         apply: (r, candidate) => {
@@ -78,32 +107,30 @@ const mutations: Mutation[] = [
     },
     {   // modifier
         getCandidates: r => {
-            return r.produce.flatMap( (p, i) => { 
-                if(p.topology !== "chain") 
-                    return [{type: "modifier", idx: i} as ModifierCandidate]; 
-                else 
-                    return [];
+            const replaceableIdcs = getAllReplacableStitches(r);
+            return replaceableIdcs.flatMap( i => {
+                return [{type: "modifier", idx: i} as ModifierCandidate];
             });
         },
         apply: (r, candidate) => {
             if(candidate.type == "modifier") {
                 const stitch = r.produce[candidate.idx];
                 // only consider different modifiers from current one
-                const options = restrictions["modifiers"].filter( m => m.position !== stitch.modifier?.position || m.type !== stitch.modifier.type);
+                const options = restrictions["modifiers"].filter( m => {
+                    const param = stitch.modifier?.getParam();
+                    return (m.position !== param?.position || m.type !== param?.type);
+                });
                 const selection = options[random.selectWeightedRandom(options)] as RuleStitchMod;
-                stitch.modifier = selection;
+                stitch.modifier = Modifier.fromParam(selection.type, selection.position);
             }
         },
         weight: 1
     },
     {   // hole size
         getCandidates: r => {
-            //return r.produce.filter( p => p.topology === "chain" && p.parameters.size !== undefined).map( (p, i) => ({type: "holeSize", idx: i } as HoleSizeCandidate));
-            return r.produce.flatMap( (p, i) => { 
-                if(p.topology !== "chain" && p.parameters.size !== undefined) 
-                    return [{type: "holeSize", idx: i} as HoleSizeCandidate]; 
-                else 
-                    return [];
+            const expandable = getAllExpandableChains(r);
+            return expandable.flatMap( i => {
+                return [{type: "holeSize", idx: i} as HoleSizeCandidate];
             });
         },
         apply: (r, candidate) => {
@@ -114,8 +141,8 @@ const mutations: Mutation[] = [
         },
         weight: 2
     },
-    {
-        getCandidates: r => {
+    {   // weight
+        getCandidates: (r) => {
             return [{type: "weight"} as WeightCandidate];
         },
         apply: (r, candidate) => {
@@ -123,6 +150,115 @@ const mutations: Mutation[] = [
                 r.weight += getNudge(r.weight, 1, 5);
         },
         weight: 3
+    }
+]
+
+const crosses: Crossbreed[] = [
+    {   // consume
+        getCandidates: (r1: Rule, r2:Rule) => {
+            if(r1.category === r2.category && r1.consume.length === r2.category.length)
+                return [{ type: "consume" } as CrossConsumeCandidate];
+            else 
+                return [];
+        },
+        apply: (r1, r2, candidate) => {
+            if(candidate.type === "consume")
+                r1.consume = r2.consume;
+        },
+        weight: 2
+    },
+    {   // stitch type
+        getCandidates: (r1: Rule, r2: Rule) => {
+            const replaceable1 = getAllReplacableStitches(r1);
+            const replaceable2 = getAllReplacableStitches(r2);
+
+            return replaceable1.flatMap( i => {
+                const options = new Set<Stitch>;
+                replaceable2.forEach( j => {  options.add(r2.produce[j].type) });
+                options.delete(r1.produce[i].type);
+                if(options.size > 0)
+                    return [{type: "stitchType", idx: i, options: options} as CrossStitchTypeCandidate];
+                else return [];
+            });
+        },
+        apply: (r1, r2, candidate) => {
+            if(candidate.type == "stitchType"){
+                const stitch = r1.produce[candidate.idx];
+                const options = Array.from(candidate.options);
+                const selection = options[random.randInt(0, options.length)];
+                stitch.type = selection as Stitch;
+            }
+        },
+        weight: 3
+    },
+    {   // modifiers
+        getCandidates: (r1: Rule, r2: Rule) => {
+            const replaceable1 = getAllReplacableStitches(r1);
+            const replaceable2 = getAllReplacableStitches(r2);
+
+            return replaceable1.flatMap( i => {
+                const options = new Set<Modifier>;
+                replaceable2.forEach( j => {  
+                    if(r2.produce[j].modifier) 
+                        options.add(r2.produce[j].modifier);
+                    else
+                        options.add(Modifier.NO); 
+                    });
+                    
+                if(r1.produce[i].modifier)
+                    options.delete(r1.produce[i].modifier);
+                else
+                    options.delete(Modifier.NO); 
+                if(options.size > 0)
+                    return [{type: "modifier", idx: i, options: options} as CrossModifierCandidate];
+                else return [];
+            })
+        },
+        apply: (r1, r2, candidate) => {
+            if(candidate.type == "modifier"){
+                const stitch = r1.produce[candidate.idx];
+                const options = Array.from(candidate.options);
+                const selection = options[random.randInt(0, options.length)];
+                stitch.modifier = selection;
+            }
+        },
+        weight: 2
+    },
+    {   // hole size
+        getCandidates: (r1, r2) => {
+            const expandable1 = getAllExpandableChains(r1);
+            const expandable2 = getAllExpandableChains(r2);
+            
+            return expandable1.flatMap( i => {
+                const options: number[] = [];
+                expandable2.forEach( j => {
+                    if(r2.produce[j].parameters.size !== r1.produce[i].parameters.size)
+                        options.push(j);
+                });
+                if(options.length > 0)
+                    return [{type: "holeSize", idx1: i, idx2: options}];
+                else
+                    return [];
+            });
+        },
+        apply: (r1, r2, candidate) => {
+            if(candidate.type == "holeSize") {
+                const stitch = r1.produce[candidate.idx1];
+                const selection = candidate.idx2[random.randInt(0, candidate.idx2.length)];
+                stitch.parameters.size! = r2.produce[selection].parameters.size!;
+            }
+        },
+        weight: 2
+    },
+    {   // weight
+        getCandidates: (r1, r2) => {
+            return [{type: "weight"} as WeightCandidate];
+        },
+        apply: (r1, r2, candidate) => {
+            if(candidate.type == "weight")
+                r1.weight = r2.weight;
+        },
+        weight: 1
     }
 ]
 
@@ -163,7 +299,7 @@ export class Rule {
                 ...s,
                 into: [...s.into],
                 parameters: { ...s.parameters },
-                ...(s.modifier ? { modifier: { ...s.modifier } } : {})
+                //...(s.modifier ? { modifier: { ...s.modifier } } : {})
             })),
             this.weight
         );
@@ -185,12 +321,28 @@ export class Rule {
         // select where to apply it
         const candidate = selectedMutation.candidates[random.randInt(0, selectedMutation.candidates.length-1)];
         selectedMutation.mutation.apply(mutantRule, candidate)
-        console.log(candidate.type)
+        //console.log(candidate.type)
         return mutantRule;
     }
 
     crossbreed(other: Rule) {
         // 
+        const crossRule = this.copy();
+        const crossCandidates = crosses.flatMap( c => {
+            const candidates = c.getCandidates(crossRule, other);
+            if (candidates.length > 0)
+                return [{cross: c, candidates: candidates, weight: c.weight}]
+            else 
+                return [];
+        });
+
+        if (crossCandidates.length === 0)
+            return crossRule;
+        const selectedCross = crossCandidates[random.selectWeightedRandom(crossCandidates)];
+        const candidate = selectedCross.candidates[random.randInt(0, selectedCross.candidates.length-1)];
+        selectedCross.cross.apply(crossRule, other, candidate);
+        //console.log(candidate.type, candidate);
+        return crossRule;
     }
 }
 
@@ -200,10 +352,11 @@ function selectStitchType(): Stitch {
     return options[idx].value as Stitch;
 }
 
-function selectStitchModifier(): RuleStitchMod {
+function selectStitchModifier(): Modifier {
     const options = restrictions["modifiers"];
     const idx = random.selectWeightedRandom(options);
-    return options[idx] as RuleStitchMod;
+    const mod = Modifier.fromParam(options[idx].type, options[idx].position)
+    return mod;
 }
 
 function createRingRule() {
@@ -354,7 +507,7 @@ export function createRuleset(numRules: number, row: number) {
     for(let i=0; i<minNumFlatRules; i++) {
         const rule = createFlatRule()
         ruleset.push(rule);
-        console.log("mutation", rule, rule.mutate());
+        //console.log("mutation", rule, rule.mutate());
     }
     for(let i=0; i<minNumStartRules; i++) {
         ruleset.push(createRingRule());
@@ -366,7 +519,6 @@ export function createRuleset(numRules: number, row: number) {
         { createRule: () => createDecreaseRule(row), weight: 1},
         { createRule: () => createHoleRule(row), weight: 1}
     ]
-
     for(let i=0; i<numRules-minNumFlatRules-minNumStartRules; i++) {
         const idx = random.selectWeightedRandom(weigthtedRules);
         ruleset.push(weigthtedRules[idx].createRule());

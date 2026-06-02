@@ -56,7 +56,7 @@ export class Modifier {
     symbol: {symbol: string, height: number} = {symbol: "", height: 0};
 
 
-    constructor(type?: "p" | "l" | "", position?: "f" | "b") {
+    private constructor(type?: "p" | "l" | "", position?: "f" | "b") {
         if(type)
             this.type = type;
         if(position && type !== "") 
@@ -76,15 +76,28 @@ export class Modifier {
                 return stitch;
         }
     }
-}
 
-export const Modifiers = {
-    BL: new Modifier("l", "b"),
-    FL: new Modifier("l"),
-    BP: new Modifier("p", "b"),
-    FP: new Modifier("p"),
-    NO: new Modifier
-};
+    static readonly BL = new Modifier("l", "b");
+    static readonly FL = new Modifier("l");
+    static readonly BP = new Modifier("p", "b");
+    static readonly FP = new Modifier("p");
+    static readonly NO = new Modifier();
+
+    static fromParam(type?: string, position?: string): Modifier {
+        switch(type) {
+            case "l": return position === "b" ? Modifier.BL : Modifier.FL;
+            case "p": return position === "b" ? Modifier.BP : Modifier.FP;
+            default:  return Modifier.NO;
+        }
+    }
+
+    getParam() {
+        return {
+            type: this.type,
+            position: this.position
+        }
+    }
+}
 
 
 export type EdgeType = "prev" | "slst" | "insert" | "surround" | "support" | "simInsert";

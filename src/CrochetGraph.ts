@@ -1,5 +1,5 @@
 import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} from "d3-force-3d";
-import {Edge, Vertex, Hole, Support, StitchTypes, Modifiers, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
+import {Edge, Vertex, Hole, Support, StitchTypes, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 import { forceCollinearSupport, forceAngularOrder } from "./forces";
 import { selectWeightedRandom } from "./random";
 import { createRuleset, Rule } from "./ruleProcessing";
@@ -39,7 +39,7 @@ export class Pattern {
         this.vertices.set(v.id, v);
     }
 
-    private addEdge(fromID: string, toID: string, type: EdgeType, mod: Modifier=Modifiers.NO) {
+    private addEdge(fromID: string, toID: string, type: EdgeType, mod: Modifier=Modifier.NO) {
         const source = this.vertices.get(fromID);
         const target = this.vertices.get(toID);
         if(source && target)
@@ -120,7 +120,7 @@ export class Pattern {
             const currentPrev = this.vertices.get(previousRowIDs[i]);
 
             if(currentPrev) {
-                // only consider rules that are applicable and do not use mor stitches than are available in the previous row
+                // only consider rules that are applicable and do not use more stitches than are available in the previous row
                 // TODO: why was this not a problem before? -> probably because creating parent list directly from consumes, so no need to verify all were picked
                 // -> every ruleset requires at least one rule that only consumes one stitch!
                 //console.log(this.rowRulesets);
@@ -163,7 +163,7 @@ export class Pattern {
                     for(const p of parents) {
                         const mod = r.produce[k].modifier;
 
-                        this.addEdge(stitch.id, p.id, "insert", new Modifier(mod?.type, mod?.position));
+                        this.addEdge(stitch.id, p.id, "insert", mod);
                     }
                     previousID = stitch.id;
                 } 
@@ -257,7 +257,7 @@ export class Pattern {
         if(currentStitch){
             let layer = currentStitch.layer;
             let layerString: string[] = [];
-            let connectedEdge: Edge | undefined = new Edge(currentStitch, currentStitch, "prev", Modifiers.NO);
+            let connectedEdge: Edge | undefined = new Edge(currentStitch, currentStitch, "prev", Modifier.NO);
 
             while(connectedEdge) {
                 currentStitch = connectedEdge.source;
