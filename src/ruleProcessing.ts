@@ -2,6 +2,18 @@ import restrictions from "./assets/metaRestrictions.json";
 import { type Stitch, Modifier } from "./Stitches"
 import * as random from "./random"
 
+
+const upperConsumeLimit = restrictions.limits.consume;
+const upperHoleSizeLimit = restrictions.limits.holeSize;
+const upperWeightLimit = restrictions.limits.weight;
+const upperIncreaseLimit = restrictions.limits.increase;
+const upperDecreaseLimit = restrictions.limits.decrease;
+const upperStitchSkipLimit = restrictions.limits.stitchSkip;
+
+// TODO
+const limitMutations = true;
+
+
 type RuleStitchMod = {type: "" | "l" | "p", position: "f" | "b"}
 type RuleStitch = {
     topology: "simple" | "decrease" | "chain",
@@ -51,6 +63,11 @@ type Crossbreed = {
     weight: number
 };
 
+
+
+
+
+
 function getAllReplacableStitches(rule: Rule) {
     return rule.produce.flatMap( (p, i) => {
         if(p.topology !== "chain")
@@ -69,14 +86,38 @@ function getAllExpandableChains(rule: Rule) {
     });
 }
 
+function getNudge(value: number, min: number, max?: number) {
+    let change = 0;
+    if(max !== undefined) {
+        if( value > min && value < max)
+            change = (random.random() >= 0.5 ? 1 : -1);
+        else 
+            if (value < max) 
+                change = + 1;
+            else 
+                if (value > min) 
+                    change = - 1;
+    }
+    else {
+        if (value > min)
+            change = (random.random() >= 0.5 ? 1 : -1);
+        else change = + 1;
+    }
+    return change;
+}
+
+
+
+
+
+
 
 const mutations: Mutation[] = [
     {   // consume
         getCandidates: r => {
             const candidates = r.consume.flatMap( (c, i) => {
-                const upperConsumeLimit = 5 //
                 if(i === 0) return [];
-                if(getNudge(c, r.consume[i-1], r.consume[i+1] ?? 5) == 0) return [];
+                if(getNudge(c, r.consume[i-1], r.consume[i+1] ?? upperConsumeLimit) == 0) return [];
                 return [{ type: "consume", idx: i, min: r.consume[i-1], max: r.consume[i+1] ?? upperConsumeLimit} as ConsumeCandidate];
             });
             return candidates;
@@ -136,7 +177,7 @@ const mutations: Mutation[] = [
         apply: (r, candidate) => {
             if(candidate.type == "holeSize") {
                 const stitch = r.produce[candidate.idx];
-                stitch.parameters.size! += getNudge(stitch.parameters.size!, 0, 5)
+                stitch.parameters.size! += getNudge(stitch.parameters.size!, 0, upperHoleSizeLimit)
             }
         },
         weight: 2
@@ -147,7 +188,7 @@ const mutations: Mutation[] = [
         },
         apply: (r, candidate) => {
             if(candidate.type == "weight")
-                r.weight += getNudge(r.weight, 1, 5);
+                r.weight += getNudge(r.weight, 1, upperWeightLimit);
         },
         weight: 3
     }
@@ -262,18 +303,6 @@ const crosses: Crossbreed[] = [
     }
 ]
 
-function getNudge(value: number, min: number, max: number) {
-    let change = 0;
-    if( value > min && value < max)
-        change = (random.random() >= 0.5 ? 1 : -1);
-    else 
-        if (value < max) 
-            change = + 1;
-        else 
-            if (value > min) 
-                change = - 1;
-    return change;
-}
 
 export class Rule {
     name: string;
@@ -416,14 +445,14 @@ function createFlatRule() {
         parameters: {}
     };
 
-    const weight = random.randInt(1, 5);
+    const weight = random.randInt(1, upperWeightLimit);
 
     const rule = new Rule("flat", "insert", [0], [stitch], weight)
     return rule;
 }
 
 function createIncreaseRule() {
-    const repeat = random.randInt(1, 4);
+    const repeat = random.randInt(2, upperIncreaseLimit);
     const stitchType = selectStitchType();
     const modifier = selectStitchModifier();
     const produce: RuleStitch[] = [];
@@ -437,13 +466,13 @@ function createIncreaseRule() {
         };
         produce.push(stitch);
     }
-    const weight = random.randInt(1, 5);
+    const weight = random.randInt(1, upperWeightLimit);
     const rule = new Rule(`increase-${stitchType}`, "insert", [0], produce, weight);
     return rule;
 }
 
-function createDecreaseRule(maxLimit: number = 4) {
-    const size = random.randInt(2, Math.min(maxLimit, 4));
+function createDecreaseRule(maxLimit: number = upperDecreaseLimit) {
+    const size = random.randInt(2, Math.min(maxLimit, upperDecreaseLimit));
     const stitchType = selectStitchType();
     const modifier = selectStitchModifier();
     const consume: number[] = [];
@@ -461,16 +490,16 @@ function createDecreaseRule(maxLimit: number = 4) {
         into: into,
         parameters: {}
     }
-    const weight = random.randInt(1, 5);
+    const weight = random.randInt(1, upperWeightLimit);
     const rule = new Rule(`decrease-${stitchType}-${size}`, "insert", consume, [stitch], weight);
     return rule;
 }
 
-function createHoleRule(maxLimit: number = 4) {
-    const consume = [0, random.randInt(0, Math.min(maxLimit, 4))];
+function createHoleRule(maxLimit: number = upperStitchSkipLimit) {
+    const consume = [0, random.randInt(0, Math.min(maxLimit, upperStitchSkipLimit))];
     const stitchType = selectStitchType();
     const modifier = selectStitchModifier();
-    const size = random.randInt(0, 5);
+    const size = random.randInt(0, upperHoleSizeLimit);
     const left: RuleStitch = {
         topology: "simple",
         type: stitchType,
@@ -494,7 +523,7 @@ function createHoleRule(maxLimit: number = 4) {
         }
     };
     const produce = [left, chain, right];
-    const weight = random.randInt(1, 5);
+    const weight = random.randInt(1, upperWeightLimit);
 
     const rule = new Rule(`hole-${stitchType}-${size}`, "insert", consume, produce, weight);
     return rule;

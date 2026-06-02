@@ -11,5 +11,13 @@
         { "type": "l", "position": "b", "weight": 1 },
         { "type": "p", "position": "f", "weight": 1 },
         { "type": "p", "position": "b", "weight": 1 }
-    ]
+    ],
+    "limits": {
+        "consume": 5,
+        "holeSize": 5,
+        "weight": 5,
+        "increase": 4,
+        "decrease": 4,
+        "stitchSkip": 4
+    }
 }
