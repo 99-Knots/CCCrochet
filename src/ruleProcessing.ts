@@ -25,7 +25,9 @@ type RuleStitch = {
     }
 }
 
-type RuleCategory = "ring" | "insert"
+type RuleCategory = "ring" | "insert";
+export type RowRules = Rule[];
+export type PatternRules = RowRules[];
 
 type ConsumeCandidate = { type: "consume", idx: number, min: number; max: number };
 type StitchTypeCandidate = { type: "stitchType", idx: number };
@@ -106,7 +108,9 @@ function getNudge(value: number, min: number, max?: number) {
     return change;
 }
 
-
+function getRandomRule(rules: Rule[]) {
+    return rules[random.selectWeightedRandom(rules)];
+}
 
 
 
@@ -177,7 +181,7 @@ const mutations: Mutation[] = [
         apply: (r, candidate) => {
             if(candidate.type == "holeSize") {
                 const stitch = r.produce[candidate.idx];
-                stitch.parameters.size! += getNudge(stitch.parameters.size!, 0, upperHoleSizeLimit)
+                stitch.parameters.size! += getNudge(stitch.parameters.size!, 1, upperHoleSizeLimit)
             }
         },
         weight: 2
@@ -197,14 +201,14 @@ const mutations: Mutation[] = [
 const crosses: Crossbreed[] = [
     {   // consume
         getCandidates: (r1: Rule, r2:Rule) => {
-            if(r1.category === r2.category && r1.consume.length === r2.category.length)
+            if(r1.category === r2.category && r1.consume.length === r2.consume.length)
                 return [{ type: "consume" } as CrossConsumeCandidate];
             else 
                 return [];
         },
         apply: (r1, r2, candidate) => {
             if(candidate.type === "consume")
-                r1.consume = r2.consume;
+                r1.consume = [...r2.consume];
         },
         weight: 2
     },
@@ -226,7 +230,7 @@ const crosses: Crossbreed[] = [
             if(candidate.type == "stitchType"){
                 const stitch = r1.produce[candidate.idx];
                 const options = Array.from(candidate.options);
-                const selection = options[random.randInt(0, options.length)];
+                const selection = options[random.randInt(0, options.length-1)];
                 stitch.type = selection as Stitch;
             }
         },
@@ -259,7 +263,7 @@ const crosses: Crossbreed[] = [
             if(candidate.type == "modifier"){
                 const stitch = r1.produce[candidate.idx];
                 const options = Array.from(candidate.options);
-                const selection = options[random.randInt(0, options.length)];
+                const selection = options[random.randInt(0, options.length-1)];
                 stitch.modifier = selection;
             }
         },
@@ -285,7 +289,7 @@ const crosses: Crossbreed[] = [
         apply: (r1, r2, candidate) => {
             if(candidate.type == "holeSize") {
                 const stitch = r1.produce[candidate.idx1];
-                const selection = candidate.idx2[random.randInt(0, candidate.idx2.length)];
+                const selection = candidate.idx2[random.randInt(0, candidate.idx2.length-1)];
                 stitch.parameters.size! = r2.produce[selection].parameters.size!;
             }
         },
@@ -325,10 +329,11 @@ export class Rule {
             this.category,
             [...this.consume],
             this.produce.map(s => ({
-                ...s,
+                topology: s.topology,
+                type: s.type,
+                modifier: s.modifier,
                 into: [...s.into],
-                parameters: { ...s.parameters },
-                //...(s.modifier ? { modifier: { ...s.modifier } } : {})
+                parameters: { ...s.parameters }
             })),
             this.weight
         );
@@ -350,7 +355,6 @@ export class Rule {
         // select where to apply it
         const candidate = selectedMutation.candidates[random.randInt(0, selectedMutation.candidates.length-1)];
         selectedMutation.mutation.apply(mutantRule, candidate)
-        //console.log(candidate.type)
         return mutantRule;
     }
 
@@ -370,7 +374,6 @@ export class Rule {
         const selectedCross = crossCandidates[random.selectWeightedRandom(crossCandidates)];
         const candidate = selectedCross.candidates[random.randInt(0, selectedCross.candidates.length-1)];
         selectedCross.cross.apply(crossRule, other, candidate);
-        //console.log(candidate.type, candidate);
         return crossRule;
     }
 }
@@ -499,7 +502,7 @@ function createHoleRule(maxLimit: number = upperStitchSkipLimit) {
     const consume = [0, random.randInt(0, Math.min(maxLimit, upperStitchSkipLimit))];
     const stitchType = selectStitchType();
     const modifier = selectStitchModifier();
-    const size = random.randInt(0, upperHoleSizeLimit);
+    const size = random.randInt(1, upperHoleSizeLimit);
     const left: RuleStitch = {
         topology: "simple",
         type: stitchType,
@@ -536,7 +539,6 @@ export function createRuleset(numRules: number, row: number) {
     for(let i=0; i<minNumFlatRules; i++) {
         const rule = createFlatRule()
         ruleset.push(rule);
-        //console.log("mutation", rule, rule.mutate());
     }
     for(let i=0; i<minNumStartRules; i++) {
         ruleset.push(createRingRule());
@@ -548,11 +550,55 @@ export function createRuleset(numRules: number, row: number) {
         { createRule: () => createDecreaseRule(row), weight: 1},
         { createRule: () => createHoleRule(row), weight: 1}
     ]
-    for(let i=0; i<numRules-minNumFlatRules-minNumStartRules; i++) {
+    for(let i=(minNumFlatRules+minNumStartRules); i<numRules; i++) {
         const idx = random.selectWeightedRandom(weigthtedRules);
         ruleset.push(weigthtedRules[idx].createRule());
     }
     return ruleset;
 }
 
-//console.log("flat rule", createIncreaseRule());
+export function breedRulesets(parentGen: {ruleset: PatternRules, weight: number}[], numRows: number) {
+    
+    const children: Rule[][] = [];
+    const child: PatternRules = [];
+    const minNumFlatRules = 1;
+    const minNumStartRules = 1;
+
+    for(let l=0; l<numRows; l++) {
+        const childRowRules: RowRules = [];
+        // select a parent for the rule number
+        // right now irrelevant because equal for all
+        const sampleParent = parentGen[random.selectWeightedRandom(parentGen)];
+        const numRules = sampleParent.ruleset[l].length;
+        
+        // for each rule choose new parents
+        for(let i=0; i<minNumFlatRules; i++) {
+            const parent1 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l]
+                .filter( r => r.category === "insert" && r.produce.length === 1 && r.consume.length === 1);
+
+            // TODO: make sure parents are different? probably not
+            const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l]
+                .filter( r => r.category === "insert" && r.produce.length === 1 && r.consume.length === 1);
+
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            childRowRules.push(rule);
+        }
+        for(let i=0; i<minNumStartRules; i++) {
+            const parent1 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category === "ring");
+            const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category === "ring");
+
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            childRowRules.push(rule);
+        }
+
+        for (let i=minNumFlatRules+minNumStartRules; i< numRules; i++) {
+            const parent1 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category !== "ring");
+            const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l];
+
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            childRowRules.push(rule);
+        }
+        child.push(childRowRules);
+    }
+    return child;
+}

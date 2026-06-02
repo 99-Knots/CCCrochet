@@ -1,17 +1,27 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/fpdc.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cc-crochet</title>
-  </head>
-  <body>
-    <input type="button" id="seed-btn" value="new seed">
-    <div id="pattern"></div>
+</head>
+
+<body>
+    <div id="top-bar">
+        <button id="seed-btn">New Seed</button>
+        <select id="lang-select">
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+        </select>
+    </div>
     <div class="canvas-container" id="canvas"></div>
-    <svg class="vis-pattern" id="vis-pattern" fill="none" stroke="black" stroke-width="5" width="800" height="800" viewBox="-50 -50 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
-    <input type="button" id="copy-btn" value="copy svg">
+
+    <div id="bot-bar">
+        <button id="gen-btn">New Generation</button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
-  </body>
+</body>
+
 </html>

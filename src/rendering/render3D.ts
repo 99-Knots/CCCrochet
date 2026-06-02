@@ -139,8 +139,8 @@ export class GraphRenderer {
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true});
 
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.5));
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor( 0xffffff, 1 );
         container.appendChild(this.renderer.domElement);
         this.container = container;
@@ -149,7 +149,7 @@ export class GraphRenderer {
 
         window.addEventListener('resize', () => {
             this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 0.5));
-            this.renderer.setSize(container.clientWidth, container.clientHeight);
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
     }
 
@@ -177,8 +177,8 @@ export class GraphRenderer {
 
         this.renderer.setScissorTest(true);
 
-        const canvasHeight = this.container.clientHeight;
-        const canvasWidth = this.container.clientWidth;
+        const canvasHeight = window.innerHeight;
+        const canvasWidth = window.innerWidth;
 
         for (const scene of this.scenes) {
             const rect = scene.element.getBoundingClientRect();

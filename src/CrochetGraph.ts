@@ -2,7 +2,7 @@ import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} fr
 import {Edge, Vertex, Hole, Support, StitchTypes, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 import { forceCollinearSupport, forceAngularOrder } from "./forces";
 import { selectWeightedRandom } from "./random";
-import { createRuleset, Rule } from "./ruleProcessing";
+import { type RowRules } from "./ruleProcessing";
 
 
 export class Pattern {
@@ -18,7 +18,7 @@ export class Pattern {
     private insertMap = new Map<Vertex, {child: Vertex, edge: Edge}[]>();   // all stitches inserted into a given stitch
 
     private sortedLayers: (Vertex[])[] = [];
-    rowRulesets: Rule[][] = [];
+    rowRulesets: RowRules[] = [];
 
     constructor(startLayout?: 0 | 1) {
         if(!startLayout){
@@ -71,15 +71,13 @@ export class Pattern {
         return hole;
     }
 
-    generate(numRows: number) {
-        const rowRules = createRuleset(1, 0);
-        this.rowRulesets.push(rowRules);
+    generate(rowRulesets: RowRules[]) {
+        //const rowRules = rowRulesets[0]//createRuleset(1, 0);
+        const numRows = rowRulesets.length;
+        this.rowRulesets.push(rowRulesets[0]);
         let l = this.addRow([this.firstStitchID]);
-        //console.log("row", l);
-        for (let j = 0; j < numRows; j++) {
-            const rowRules = createRuleset(10, j);
-            this.rowRulesets.push(rowRules);
-            //console.log("row rules", this.rowRulesets, rowRules);
+        for (let j = 1; j < numRows; j++) {
+            this.rowRulesets.push(rowRulesets[j]);
             l = this.addRow(l);
         }
 
@@ -123,7 +121,6 @@ export class Pattern {
                 // only consider rules that are applicable and do not use more stitches than are available in the previous row
                 // TODO: why was this not a problem before? -> probably because creating parent list directly from consumes, so no need to verify all were picked
                 // -> every ruleset requires at least one rule that only consumes one stitch!
-                //console.log(this.rowRulesets);
                 const newRules = this.rowRulesets[this.rowRulesets.length-1].filter( r => r["category"] == currentPrev.type.category && (i+Math.max(...r["consume"]) < previousRowIDs.length) );
                 const idx = selectWeightedRandom(newRules);
                 const r = newRules[idx];
@@ -172,15 +169,14 @@ export class Pattern {
         }
         for(let l=1; l<newIDs.length-1; l++) {
             const stitch = this.vertices.get(newIDs[l])
-            if (stitch instanceof Hole)
+            if (stitch instanceof Hole){
                 this.addHole(stitch, newIDs[l-1], newIDs[l+1]);
+            }
         }
         return newIDs;
     }
 
     private processHoles() {
-        //const stitches = this.sortedLayers.flat();
-        //console.log(stitches.length);
         const holes = Array.from(this.vertices.values()).filter(v => v instanceof Hole) as Hole[];
         for(const hole of holes) {
             let insertions = this.insertMap.get(hole)?.filter( i => i.child.type != StitchTypes.HL) ?? [];

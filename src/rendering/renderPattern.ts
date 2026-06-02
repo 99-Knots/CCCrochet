@@ -4,7 +4,7 @@ import { select } from 'd3-selection';
 import { zoom } from 'd3-zoom';
 
 
-const svgNamespace = "http://www.w3.org/2000/svg";
+export const svgNamespace = "http://www.w3.org/2000/svg";
 
 
 export function setupZoom(svgElement: SVGSVGElement, contentGroup: SVGGElement) {
@@ -106,15 +106,14 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 let next = prevMapInv.get(v)!;
                 if (!prev)
                      prev =prevMapInv.get(v);
-                // if(!next)
-                //     next = v;
+                    
                 const dx = (prev?.x ?? 0) - (next.x ??0);
                 const dy = (prev?.y ?? 0) - (next.y ??0);
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 const angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 
-                const scale = distance / 100;
-                //console.log("x, y:", v.x, v.y, "\nangle:", angle, "\nscale:", scale);
+                //const scale = distance / 100;
+                
                 const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angle}) scale(${1/10})  translate(-50, -50)`;
                 path.setAttribute("transform", transform);
                 path.setAttribute("stroke", (v.layer % 2 == 1) ? "#000": "#666");

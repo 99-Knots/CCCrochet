@@ -1,37 +1,176 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 #pattern {
     margin: 1.5rem;
     font-size: 30px;
 }
 
-.canvas-container {
-    width: 80vw;
-    height: 80vh;
-    display: grid;
+#top-bar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    padding: 1.5rem;
+    gap: 1rem;
+    z-index: 100;
+    background-image: url("/alpineTexPurp.png");
+    background-repeat: repeat;
+    background-size: 100px;
+    background-position-y: -20px;
+}
 
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-    gap: 20px;
-    padding: 20px;
-    box-sizing: border-box;
-    overflow-y: auto;
+#bot-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    padding: 1.5rem;
+    gap: 1rem;
+    z-index: 100;
+    background-image: url("/alpineTexPurp.png");
+    background-repeat: repeat;
+    background-size: 100px;
+    background-position-y: -20px;
+}
+
+.canvas-container {
+    flex: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    align-content: start;
+    gap: 2rem;
+    padding: 2rem;
+    margin: 0 auto;
 }
 
 .canvas-container canvas {
+    position: fixed;
     width: 100%;
     height: 100%;
     display: block;
-    position: fixed;
     left: 0;
     top: 0;
     z-index: -1;
+    pointer-events: none;
 }
 
-.canvas-container .scene {
+.card-border::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 3rem - 4rem); 
+    height: calc(100% + 3rem - 4rem);
+    margin: calc(-3rem / 2);
+    
+    border: 2rem solid #fff; 
+    box-shadow: inset 0 0 0 0.1rem #000;
+    border-radius: 3rem;
+
+    pointer-events: none;
+    z-index: 10;
+}
+
+.card-border {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+}
+
+.pattern-card {
     width: 100%;
-    display: block;
-    aspect-ratio: 1;
-    border: solid #000;
+    height: 100%;
+    overflow: hidden;
 }
 
-.vis-pattern path,line {
+.pattern-card .scene {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.chart {
+    position: absolute;
+    display: flex;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1;
+    background-color: #fffa;
+    z-index: 3;
+}
+
+.hidden {
+    display: none;
+}
+
+.chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.chart path,line {
     vector-effect: non-scaling-stroke;
+}
+
+.card-controls {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 2rem;
+    z-index: 5;
+    background-color: #fff;
+    border-top: 2px solid #000;
+}
+
+.card-controls button {
+    flex: 1;
+}
+
+
+.card-controls button svg {
+    height: 2rem;
+    width: 2rem;
+    stroke-width: 1;
+}
+
+.card-controls button svg path,line {
+    vector-effect: non-scaling-stroke;
+}
+
+.select-btn {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3rem;
+    height: 3rem;
+    z-index: 5;
+    border-bottom-right-radius: 1rem;
+    padding: 1rem;
+    background-color: #fff;
+}
+
+.select-btn.selected {
+    background-color: #9d7bc3;
+}
+.select-btn.selected::after {
+    content: "✓";
+    position: absolute;
+    right: -0.2rem;
+    bottom: -0.2rem;
+    width: 100%;
+    height: 100%;
+    font-size: 2rem;
 }
