@@ -105,13 +105,17 @@ export class Edge {
         const height = this.source.type.symbol?.height;
         switch(this.type) {
             case "prev":
-                this.length = 0.8;
+                // chains are shorter
+                if(this.source.type === StitchTypes.CH || this.target.type === StitchTypes.CH)
+                    this.length = 0.5;
+                else
+                    this.length = 0.8;
                 break;
             case "insert":
                 this.length = height ?? 1;
                 break;
             case "simInsert":
-                this.length = height ? height/2 : 0.5;
+                this.length = height ? height/2 : 0.3;
                 break;
             case "slst":
                 this.length = 0.5;

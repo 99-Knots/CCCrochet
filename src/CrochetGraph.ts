@@ -281,10 +281,11 @@ export class Pattern {
         const stretchFactor = 8;
         const layers = this.sortedLayers;
         for (const l of layers) {
-            const angle = 2*Math.PI / l.length;
+            const angle = 2 * Math.PI / l.length;
             l.forEach( (v, index) => {
-                v.x = v.layer*stretchFactor * Math.cos(index * angle); 
-                v.y = v.layer*stretchFactor * Math.sin(index * angle);
+                v.x = v.layer * stretchFactor * Math.cos(index * angle);
+                v.y = v.layer * stretchFactor * Math.sin(index * angle);
+                v.z = (Math.random() - 0.5) * v.layer * stretchFactor * 0.5; // random ruffle for the outer layers
             });
         }
 
@@ -304,14 +305,14 @@ export class Pattern {
                         case "surround": 
                             return 0.5; // Allow the hole center to be flexible
                         case "prev": 
-                            return 0.8;
+                            return 2.0;
                         default: 
                             return 0.1;
                     }
                 })
                 .iterations(10))
-            .force("charge", forceManyBody().strength((v: Vertex) => (v.type == StitchTypes.SP) ? 20 : -80))
-            .force("collide", forceCollide( (v: Vertex) => (v.type == StitchTypes.SP) ? 0 : 10))
+            .force("charge", forceManyBody().strength((v: Vertex) => (v.type == StitchTypes.SP) ? 20 : (v.type == StitchTypes.CH) ? -40 : -80))
+            .force("collide", forceCollide( (v: Vertex) => (v.type == StitchTypes.SP) ? 0 : (v.type == StitchTypes.CH) ? 1 : 10))
             .stop();
 
         const MAX_TICKS = 500; 
@@ -341,7 +342,7 @@ export class Pattern {
                     case "simInsert":
                     case "insert": return 1.0;
                     case "surround": return 0.3;
-                    case "prev": return 0.2;
+                    case "prev": return 0.4;
                     case "support": return 0.0;
                     default: return 0.1;
                 }

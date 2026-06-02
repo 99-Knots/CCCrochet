@@ -57,7 +57,7 @@
         "height": 0
     },
     "bar": {
-        "symbol": "M20 10 h60",
+        "symbol": "M0 10 h100",
         "height": 0
     }
 }
