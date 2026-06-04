@@ -38,7 +38,7 @@ export class GraphScene {
         this.renderer = renderer;
 
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xffffff);
+        this.scene.background = null;//new THREE.Color(0xffffff);
         this.camera = new THREE.PerspectiveCamera(
             75,
             elem.clientWidth / elem.clientHeight,
@@ -137,11 +137,11 @@ export class GraphRenderer {
     constructor(container: HTMLElement) {
         this.sizeFactor = 8;
         
-        this.renderer = new THREE.WebGLRenderer({ antialias: true});
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true});
 
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor( 0xffffff, 1 );
+        this.renderer.setClearColor( 0xffffff, 0 );
         container.appendChild(this.renderer.domElement);
         //this.container = container;
 

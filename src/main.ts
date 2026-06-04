@@ -1,11 +1,14 @@
 import './style.css'
 import chartIcon from './assets/fpdc.svg?raw';
+import dnldIcon from './assets/dnld.svg?raw';
 import * as CG from './CrochetGraph.ts'
 import { GraphRenderer } from './rendering/render3D.ts';
 import { drawToSVG, svgNamespace } from './rendering/renderPattern.ts';
 import * as random from './random.ts';
 import { Rule, createRuleset, breedRulesets, type RowRules, type PatternRules } from './ruleProcessing.ts'
 
+
+const coralPalettes = ["#ea7070", "#7ae7c7", "#e59572", "#4dbedf", "#fbe050", "#8a75c6"];
 
 function generatePattern(rowRulesets: Rule[][]) {
     const pat = new CG.Pattern();
@@ -57,7 +60,8 @@ async function geneticGeneration(gen: number = 0) {
 
             // generate pattern from ruleset
             const pat = generatePattern(rowRuleset);
-            const rend = await renderPattern(pat, renderer, k, "#7A5292");
+            const color = coralPalettes[k % coralPalettes.length];
+            const rend = await renderPattern(pat, renderer, k, color);
             patternList.push({pattern: pat, selected: false});
         }
     }
@@ -71,7 +75,9 @@ async function geneticGeneration(gen: number = 0) {
         }
         for (let i=0; i<children.length; i++) {
             const pat = generatePattern(children[i]);
-            const rend = await renderPattern(pat, renderer, i, "#7A5292");
+            // Choose a color based on the card's index so they cycle beautifully
+            const color = coralPalettes[i % coralPalettes.length];
+            const rend = await renderPattern(pat, renderer, i, color);
             patternList.push({pattern: pat, selected: false});
         }
     }
@@ -102,6 +108,7 @@ function createSVG() {
 
 async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index: number = 0, color: string|null = null) {
     const cardContainer = document.createElement("div");
+    cardContainer.style.setProperty("--coral-color", color);
     cardContainer.classList.add("card-border");
 
     const card = document.createElement("div");
@@ -135,10 +142,11 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     copyBtn.setAttribute("data-i18n", "copy");
 
     const dlBtn = document.createElement("button");
+    dlBtn.innerHTML = `${dnldIcon} Download`;
     dlBtn.setAttribute("data-i18n", "download");
 
-    //controlsElem.append(toggleBtn, copyBtn, dlBtn);
     controlsElem.appendChild(toggleBtn);
+    controlsElem.appendChild(dlBtn);
     card.appendChild(controlsElem);
 
     const selectBtn = document.createElement("button");
@@ -146,9 +154,10 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     selectBtn.addEventListener("click", () => {
         selectBtn.classList.toggle("selected");
         patternList[index].selected = selectBtn.classList.contains("selected");
+        selectBtn.innerText ="✓";
         //console.log(patternList)
     });
-    card.appendChild(selectBtn);
+    controlsElem.appendChild(selectBtn);
 
     canvas.appendChild(cardContainer);
     const scene = renderer.addScene(sceneElem);
@@ -181,6 +190,7 @@ const canvas = document.getElementById("canvas")!;
 let patternList: {pattern: CG.Pattern, selected: boolean}[] = [];
 
 const renderer = createRenderer(canvas);
+window.dispatchEvent(new Event('resize'));
 await geneticGeneration();
 
 
