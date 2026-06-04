@@ -12,6 +12,7 @@ const upperStitchSkipLimit = restrictions.limits.stitchSkip;
 
 // TODO
 const limitMutations = true;
+const mutationRate = 0.01;
 
 
 type RuleStitchMod = {type: "" | "l" | "p", position: "f" | "b"}
@@ -341,20 +342,24 @@ export class Rule {
 
     mutate() {
         const mutantRule = this.copy();
-        const mutationCandidates = mutations.flatMap( m => {
-            const candidates = m.getCandidates(mutantRule);
-            if(candidates.length > 0)
-                return [{mutation: m, candidates: candidates, weight: m.weight}]
-            else
-                return [];
-        } );
+        const randomMutate = random.random();
+        if (randomMutate < mutationRate)
+        {
+            const mutationCandidates = mutations.flatMap( m => {
+                const candidates = m.getCandidates(mutantRule);
+                if(candidates.length > 0)
+                    return [{mutation: m, candidates: candidates, weight: m.weight}]
+                else
+                    return [];
+            } );
 
-        if (mutationCandidates.length === 0) return mutantRule;
-        // select the kind of mutation
-        const selectedMutation = mutationCandidates[random.selectWeightedRandom(mutationCandidates)];
-        // select where to apply it
-        const candidate = selectedMutation.candidates[random.randInt(0, selectedMutation.candidates.length-1)];
-        selectedMutation.mutation.apply(mutantRule, candidate)
+            if (mutationCandidates.length === 0) return mutantRule;
+            // select the kind of mutation
+            const selectedMutation = mutationCandidates[random.selectWeightedRandom(mutationCandidates)];
+            // select where to apply it
+            const candidate = selectedMutation.candidates[random.randInt(0, selectedMutation.candidates.length-1)];
+            selectedMutation.mutation.apply(mutantRule, candidate)
+        }
         return mutantRule;
     }
 
@@ -578,14 +583,14 @@ export function breedRulesets(parentGen: {ruleset: PatternRules, weight: number}
             const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l]
                 .filter( r => r.category === "insert" && r.produce.length === 1 && r.consume.length === 1);
 
-            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2)).mutate();
             childRowRules.push(rule);
         }
         for(let i=0; i<minNumStartRules; i++) {
             const parent1 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category === "ring");
             const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category === "ring");
 
-            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2)).mutate();
             childRowRules.push(rule);
         }
 
@@ -593,7 +598,7 @@ export function breedRulesets(parentGen: {ruleset: PatternRules, weight: number}
             const parent1 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l].filter( r => r.category !== "ring");
             const parent2 = parentGen[random.selectWeightedRandom(parentGen)].ruleset[l];
 
-            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2));
+            const rule = getRandomRule(parent1).crossbreed(getRandomRule(parent2)).mutate();
             childRowRules.push(rule);
         }
         child.push(childRowRules);

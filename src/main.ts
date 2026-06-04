@@ -15,7 +15,7 @@ const contBtn = document.getElementById("cont-btn") as HTMLButtonElement;
 const renderer = createRenderer(canvas);
 const coralPalettes = ["#ea7070", "#7ae7c7", "#e59572", "#4dbedf", "#fbe050", "#8a75c6"];
 
-let numRows = 6;
+let numRows = 5;
 let numSamples = 6;
 let generation = 0;
 
@@ -33,7 +33,7 @@ function hideOverlay() {
     document.body.classList.remove("no-scroll");
     shownTutorial = true;
     if(overlay)
-        overlay!.innerHTML = "Loading...";
+        overlay!.innerHTML = "Generating...";
 }
 
 function setupTutorial() {
