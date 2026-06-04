@@ -43,9 +43,9 @@ export class GraphScene {
             75,
             elem.clientWidth / elem.clientHeight,
             0.1,
-            1000
+            2000
         );
-        this.camera.position.set(0, 70, 70);
+        this.camera.position.set(0, 150, 150);
         this.controls = new OrbitControls(this.camera, this.element);
 
 

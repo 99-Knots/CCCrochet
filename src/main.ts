@@ -8,7 +8,92 @@ import * as random from './random.ts';
 import { Rule, createRuleset, breedRulesets, type RowRules, type PatternRules } from './ruleProcessing.ts'
 
 
+const overlay = document.getElementById("overlay");
+const canvas = document.getElementById("canvas")!;
+const contBtn = document.getElementById("cont-btn") as HTMLButtonElement;
+
+const renderer = createRenderer(canvas);
 const coralPalettes = ["#ea7070", "#7ae7c7", "#e59572", "#4dbedf", "#fbe050", "#8a75c6"];
+
+let numRows = 6;
+let numSamples = 6;
+let generation = 0;
+
+let patternList: {pattern: CG.Pattern, selected: boolean}[] = [];
+let shownTutorial = false;
+
+
+function showOverlay() {
+    overlay?.classList.remove("hidden");
+    document.body.classList.add("no-scroll");
+}
+
+function hideOverlay() {
+    overlay?.classList.add("hidden");
+    document.body.classList.remove("no-scroll");
+    shownTutorial = true;
+    if(overlay)
+        overlay!.innerHTML = "Loading...";
+}
+
+function setupTutorial() {
+    const wrap = document.getElementById("overlay");
+    if (!wrap) return;
+    const wrapRect = wrap.getBoundingClientRect();
+
+    const tutLbls = document.getElementsByClassName("tut-text");
+    for(const tut of tutLbls) {
+        const elem = (tut as HTMLElement)
+        const target = elem.dataset.target;
+        const targetElem = document.getElementById(target??"");
+        if (!targetElem) 
+            return;
+        const targetRect = targetElem.getBoundingClientRect();
+        const selfRect = elem.getBoundingClientRect();
+        let offsetX = 0;
+        let offsetY = 0;
+        if(elem.classList.contains("left-top")) {
+            offsetX = -wrapRect.left + targetRect.left - selfRect.width;
+            offsetY = - wrapRect.top + targetRect.top;
+            
+            elem.style.setProperty("--left", `calc(${offsetX}px + 2rem)`);
+            elem.style.setProperty("--top", `calc(${offsetY}px - 2.2em)`);
+        }
+        if(elem.classList.contains("right-bot")) {
+            offsetX = -wrapRect.left + targetRect.left + targetRect.width/2;
+            offsetY = -wrapRect.top + targetRect.top + targetRect.height;
+            
+            elem.style.setProperty("--left", `${offsetX}px`);
+            elem.style.setProperty("--top", `calc(${offsetY}px + 1em)`);
+        }
+        if(elem.classList.contains("right-top")) {
+            offsetX = -wrapRect.left + targetRect.left + targetRect.width;
+            offsetY = -wrapRect.top + targetRect.top;
+            
+            elem.style.setProperty("--left", `calc(${offsetX}px + 0.2em)`);
+            elem.style.setProperty("--top", `calc(${offsetY}px - 2.2em)`);
+        }
+    }
+}
+
+async function doGeneration() {
+    contBtn.disabled = true;
+    showOverlay();
+
+    // wait for a moment to let browser catch up
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    await geneticGeneration(generation)
+        .then( () => {
+            if(shownTutorial) 
+                hideOverlay(); 
+            else 
+                contBtn.disabled = false;
+            contBtn.innerText="Let's go!"
+        });
+    window.scrollTo(0, 0);
+    generation++;
+}
 
 function generatePattern(rowRulesets: Rule[][]) {
     const pat = new CG.Pattern();
@@ -16,20 +101,6 @@ function generatePattern(rowRulesets: Rule[][]) {
 
     return pat.generate(rowRulesets);
 }
-
-// async function generateSamples(numSamples: number) {
-//     // clear old samples
-//     const renderCanv = canvas.getElementsByTagName("canvas")[0];
-//     canvas.replaceChildren(renderCanv);
-
-//     patternList = [];
-//     for (let i = 0; i < numSamples; i++) {
-//         const pat = generatePattern(numRows);
-//         const rend = await renderPattern(pat, renderer, i, "#7A5292");
-//         patternList.push({pattern: pat, selected: false});
-//         console.log(`Sample: ${i} rules: ${pat.rowRulesets}`);
-//     }
-// }
 
 function createMatingPool(rulesets: PatternRules[], fitnesses: number[]) {
     const matingPool: {ruleset: PatternRules, weight: number}[] = [];
@@ -132,22 +203,19 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     controlsElem.classList.add("card-controls");
 
     const toggleBtn = document.createElement("button");
-    toggleBtn.innerHTML = `${chartIcon} Show Pattern`;
+    toggleBtn.innerHTML = `${chartIcon}`;
     toggleBtn.setAttribute("data-i18n", "toggleChart");
     toggleBtn.addEventListener("click", () => {
         chart.classList.toggle("hidden");
     });
 
-    const copyBtn = document.createElement("button");
-    copyBtn.setAttribute("data-i18n", "copy");
+    // const copyBtn = document.createElement("button");
+    // copyBtn.setAttribute("data-i18n", "copy");
 
     const dlBtn = document.createElement("button");
-    dlBtn.innerHTML = `${dnldIcon} Download`;
+    dlBtn.innerHTML = `${dnldIcon}`;
     dlBtn.setAttribute("data-i18n", "download");
 
-    controlsElem.appendChild(toggleBtn);
-    controlsElem.appendChild(dlBtn);
-    card.appendChild(controlsElem);
 
     const selectBtn = document.createElement("button");
     selectBtn.classList.add("select-btn");
@@ -157,7 +225,15 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
         selectBtn.innerText ="✓";
         //console.log(patternList)
     });
+
+    const spacer = document.createElement("div");
+    spacer.classList.add("spacer");
+
+    controlsElem.appendChild(toggleBtn);
+    controlsElem.appendChild(dlBtn);
+    controlsElem.appendChild(spacer);
     controlsElem.appendChild(selectBtn);
+    card.appendChild(controlsElem);
 
     canvas.appendChild(cardContainer);
     const scene = renderer.addScene(sceneElem);
@@ -169,28 +245,28 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     return scene;
 }
 
-//const pattern = document.getElementById("pattern")!;
+window.addEventListener("resize", () => {
+    setupTutorial();
+})
 
-let numRows = 4;
-let numSamples = 6;
-let generation = 1;
-
-const seedBtn = document.getElementById("seed-btn")?.addEventListener("click", (async () => {
+document.getElementById("seed-btn")?.addEventListener("click", (async () => {
     random.setSeed("hook");
     generation = 0;
-    await geneticGeneration(generation);
+    await doGeneration();
 }));
 
 
-const genBtn = document.getElementById("gen-btn")?.addEventListener("click", (async () => {
-    await geneticGeneration(generation);
-    generation++;
+document.getElementById("gen-btn")?.addEventListener("click", (async () => {
+    await doGeneration();
 }));
-const canvas = document.getElementById("canvas")!;
-let patternList: {pattern: CG.Pattern, selected: boolean}[] = [];
 
-const renderer = createRenderer(canvas);
-window.dispatchEvent(new Event('resize'));
-await geneticGeneration();
+contBtn?.addEventListener("click", hideOverlay);
+await new Promise(resolve => setTimeout(resolve, 0));
+
+window.dispatchEvent(new Event("resize"));
+window.addEventListener("load", async () => {  
+    setupTutorial();
+    await doGeneration();
+});
 
 
