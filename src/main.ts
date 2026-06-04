@@ -13,7 +13,7 @@ const canvas = document.getElementById("canvas")!;
 const contBtn = document.getElementById("cont-btn") as HTMLButtonElement;
 
 const renderer = createRenderer(canvas);
-const coralPalettes = ["#ea7070", "#7ae7c7", "#e59572", "#4dbedf", "#fbe050", "#8a75c6"];
+const coralPalettes = ["#ea7070", "#7ae7c7", "#4dbedf", "#e59572", "#fbe050", "#8a75c6"];
 
 let numRows = 5;
 let numSamples = 6;
@@ -53,25 +53,25 @@ function setupTutorial() {
         let offsetX = 0;
         let offsetY = 0;
         if(elem.classList.contains("left-top")) {
-            offsetX = -wrapRect.left + targetRect.left - selfRect.width;
-            offsetY = - wrapRect.top + targetRect.top;
+            offsetX = -wrapRect.left + targetRect.left - selfRect.width/4;
+            offsetY = wrapRect.bottom - targetRect.top;
             
-            elem.style.setProperty("--left", `calc(${offsetX}px + 2rem)`);
-            elem.style.setProperty("--top", `calc(${offsetY}px - 2.2em)`);
-        }
-        if(elem.classList.contains("right-bot")) {
-            offsetX = -wrapRect.left + targetRect.left + targetRect.width/2;
-            offsetY = -wrapRect.top + targetRect.top + targetRect.height;
-            
-            elem.style.setProperty("--left", `${offsetX}px`);
-            elem.style.setProperty("--top", `calc(${offsetY}px + 1em)`);
+            elem.style.setProperty("--left", `calc(${offsetX}px - 1em)`);
+            elem.style.setProperty("--top", `calc(${offsetY}px + 1.8em)`);
         }
         if(elem.classList.contains("right-top")) {
-            offsetX = -wrapRect.left + targetRect.left + targetRect.width;
-            offsetY = -wrapRect.top + targetRect.top;
+            offsetX = -wrapRect.left + targetRect.left -selfRect.width*0.75 + targetRect.width;
+            offsetY = wrapRect.bottom - targetRect.top;
             
-            elem.style.setProperty("--left", `calc(${offsetX}px + 0.2em)`);
-            elem.style.setProperty("--top", `calc(${offsetY}px - 2.2em)`);
+            elem.style.setProperty("--left", `calc(${offsetX}px + 1.5em)`);
+            elem.style.setProperty("--top", `calc(${offsetY}px + 0.4em)`);
+        }
+        if(elem.classList.contains("right-bot")) {
+            offsetX = -wrapRect.left + targetRect.left - selfRect.width/2;
+            offsetY = -wrapRect.top + targetRect.top + targetRect.height;
+            
+            elem.style.setProperty("--left", `calc(${offsetX}px + 3em)`);
+            elem.style.setProperty("--top", `calc(${offsetY}px + 1.1em)`);
         }
     }
 }
@@ -261,12 +261,12 @@ document.getElementById("gen-btn")?.addEventListener("click", (async () => {
 }));
 
 contBtn?.addEventListener("click", hideOverlay);
-await new Promise(resolve => setTimeout(resolve, 0));
 
-window.dispatchEvent(new Event("resize"));
 window.addEventListener("load", async () => {  
+    console.log("loading")
     setupTutorial();
-    await doGeneration();
+    console.log("start gen")
+    await doGeneration().then(
+        () => console.log("generated")
+    );
 });
-
-

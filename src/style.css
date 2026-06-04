@@ -187,6 +187,9 @@ body {
 
 .pattern-card .scene {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     aspect-ratio: 1;
     z-index: 0;
@@ -196,6 +199,11 @@ body {
             color-mix(in srgb, var(--coral-color), #fff 60%) 0%,
             #fff 100%
         );
+}
+
+#scene-tut {
+    width: 40%;
+    height: 40%;
 }
 
 .chart {
@@ -257,7 +265,7 @@ body {
     color: color-mix(in srgb, var(--coral-color), #000 50%);
 
     background: transparent;
-    border: 2px solid var(--coral-color);
+    border: 2px solid color-mix(in srgb, var(--coral-color), #000 20%);
 }
 
 
@@ -286,7 +294,7 @@ button.select-btn {
     color: var(--sand-color);
 
     transition: all 0.2s ease-in-out;
-    box-shadow: 0 0 5px var(--coral-color);
+    box-shadow: 0 0 1px var(--dark-color), 0 0 8px color-mix(in srgb, var(--coral-color), #000 20%);
 }
 
 .select-btn:hover {
@@ -322,6 +330,7 @@ button {
     position: relative;
     max-height: 70vh;
     margin: 1rem;
+    max-width: min(350px, calc(100vw - 4rem));
 }
 
 .overlay .tutorial button {
@@ -343,33 +352,62 @@ button {
     width: fit-content;
 
     background-color: #fffa;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(2px);
     padding: 0.25em 0.75em;
     border-radius: 2em;
+}
+
+.tut-text.left-top {
+    top: unset;
+    bottom: var(--top);
+}
+
+.tut-text.right-top {
+    top: unset;
+    bottom: var(--top);
 }
 
 .tut-text::after {
     content: "⤹";
     position: absolute;
     text-shadow: none;
-    font-size: 2em;
+    font-size: 2.3em;
     color: var(--dark-color);
 }
 
 .tut-text.left-top::after {
-    top: 50%;
-    right: 1.1em;
-    rotate: -20deg;
+    top: 100%;
+    left: 25%;
+    rotate: -0deg;
+    margin-top: -0.2em;
 }
 
 .tut-text.right-top::after {
-    top: -0rem;
-    left: -0.5em;
-    rotate: 60deg;
+    content: "⤸";
+    top: 100%;
+    right: 25%;
+    rotate: 40deg;
+    margin-top: -0.4em;
 }
 
 .tut-text.right-bot::after {
     top: -2.1rem;
-    left: 0.5em;
+    right: 50%;
     rotate: 170deg;
+}
+
+@media (max-width: 480px) {
+    .tut-text {
+        max-width: 120px; 
+        text-align: center;
+        white-space: normal;
+    }
+    
+    .tut-text.right-bot::after {
+        top: -1.8rem;
+    }
+
+    .overlay {
+        gap: 3rem;
+    }
 }
