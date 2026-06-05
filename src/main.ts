@@ -116,13 +116,13 @@ function generatePattern(rowRulesets: Rule[][]) {
     return pat.generate(rowRulesets);
 }
 
-function createMatingPool(rulesets: PatternRules[], fitnesses: number[]) {
-    const matingPool: {ruleset: PatternRules, weight: number}[] = [];
+function createMatingPool(rulesets: PatternRules[], usages: number[][][], fitnesses: number[]) {
+    const matingPool: {ruleset: PatternRules, usages: number[][], weight: number}[] = [];
     if (rulesets.length !== fitnesses.length)
         return []
     
     for(let i=0; i<rulesets.length; i++) {
-        matingPool.push({ruleset: rulesets[i], weight: fitnesses[i]*100});
+        matingPool.push({ruleset: rulesets[i], usages: usages[i], weight: fitnesses[i]*100});
     }
     return matingPool;
 }
@@ -156,8 +156,9 @@ async function geneticGeneration(gen: number = 0) {
             const parents = oldPatternList.map( p => p.pattern.rowRulesets );
             const numSelected = oldPatternList.flatMap( p => p.selected ? [true] : []).length;
             const numUnselected = numSamples - numSelected;
-            const fitness = oldPatternList.map( p => p.selected ? 0.9/numSelected : numUnselected ? 0.1/numUnselected : 0);
-            const matingPool = createMatingPool(parents, fitness);
+            const fitness = oldPatternList.map( p => p.selected ? (numSelected ? 0.9/numSelected : 0) : (numUnselected ? 0.1/numUnselected : 0));
+            const usages = oldPatternList.map(p => p.pattern.usedRules);
+            const matingPool = createMatingPool(parents, usages, fitness);
             children.push(breedRulesets(matingPool, numRows));
         }
         for (let i=0; i<children.length; i++) {
@@ -330,11 +331,13 @@ document.getElementById("seed-btn")?.addEventListener("click", (async () => {
     random.setSeed("hook");
     generation = 0;
     await doGeneration();
+    adjustChartsToHandedness();
 }));
 
 
 document.getElementById("gen-btn")?.addEventListener("click", (async () => {
     await doGeneration();
+    adjustChartsToHandedness();
 }));
 
 contBtn?.addEventListener("click", hideOverlay);
@@ -347,8 +350,9 @@ window.addEventListener("load", async () => {
     console.log("loading")
     setupTutorial();
     console.log("start gen")
-    await doGeneration().then(
-        () => console.log("generated")
+    await doGeneration().then( () => {
+            console.log("generated")
+            adjustChartsToHandedness();
+        }
     );
-    adjustChartsToHandedness();
 });

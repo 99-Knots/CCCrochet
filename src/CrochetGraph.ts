@@ -2,7 +2,7 @@ import {forceSimulation, forceLink, forceManyBody, forceCollide, forceRadial} fr
 import {Edge, Vertex, Hole, Support, StitchTypes, StitchType, Modifier, type EdgeType, type Stitch} from "./Stitches"
 import { forceCollinearSupport, forceAngularOrder } from "./forces";
 import { selectWeightedRandom } from "./random";
-import { type RowRules } from "./ruleProcessing";
+import { type PatternRules } from "./ruleProcessing";
 
 
 export class Pattern {
@@ -18,8 +18,9 @@ export class Pattern {
     private insertMap = new Map<Vertex, {child: Vertex, edge: Edge}[]>();   // all stitches inserted into a given stitch
 
     private sortedLayers: (Vertex[])[] = [];
-    rowRulesets: RowRules[] = [];
+    rowRulesets: PatternRules = [];
     usedStitches = new Map<string, {stitch: StitchType, modifier: Modifier}>;
+    usedRules: number[][] = []; // indices of rules used per row
 
     constructor(startLayout?: 0 | 1) {
         if(!startLayout){
@@ -73,7 +74,7 @@ export class Pattern {
         return hole;
     }
 
-    generate(rowRulesets: RowRules[]) {
+    generate(rowRulesets: PatternRules) {
         //const rowRules = rowRulesets[0]//createRuleset(1, 0);
         const numRows = rowRulesets.length;
         this.rowRulesets.push(rowRulesets[0]);
@@ -113,6 +114,7 @@ export class Pattern {
         this.currentRow += 1;
         const newIDs: string[] = [];
         let previousID: string = previousRowIDs[previousRowIDs.length-1];
+        const usedRulesOfRow = Array(this.rowRulesets[this.rowRulesets.length-1].length).fill(0);
 
         // iterate along stitches in prev row
         let i = 0;
@@ -125,6 +127,7 @@ export class Pattern {
                 // -> every ruleset requires at least one rule that only consumes one stitch!
                 const newRules = this.rowRulesets[this.rowRulesets.length-1].filter( r => r["category"] == currentPrev.type.category && (i+Math.max(...r["consume"]) < previousRowIDs.length) );
                 const idx = selectWeightedRandom(newRules);
+                usedRulesOfRow[idx]++;
                 const r = newRules[idx];
                 const maxConsume = Math.max(...r["consume"]);
 
@@ -180,6 +183,7 @@ export class Pattern {
                 this.addHole(stitch, newIDs[l-1], newIDs[l+1]);
             }
         }
+        this.usedRules.push(usedRulesOfRow);
         return newIDs;
     }
 

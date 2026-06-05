@@ -562,10 +562,18 @@ export function createRuleset(numRules: number, row: number) {
     return ruleset;
 }
 
-export function breedRulesets(parentGen: {ruleset: PatternRules, weight: number}[], numRows: number) {
+export function breedRulesets(parentGen: {ruleset: PatternRules, usages: number[][], weight: number}[], numRows: number) {
     const child: PatternRules = [];
     const minNumFlatRules = 1;
     const minNumStartRules = 1;
+
+    for(const parent of parentGen) {
+        for(let k=0; k<parent.ruleset.length; k++) {
+            for(let l=0; l<parent.ruleset[k].length; l++) {
+                parent.ruleset[k][l].weight = parent.usages[k][l] + 1;  // to ensure no hidden genes
+            }
+        }
+    }
 
     for(let l=0; l<numRows; l++) {
         const childRowRules: RowRules = [];
