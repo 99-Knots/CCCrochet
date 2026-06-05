@@ -19,6 +19,7 @@ export class Pattern {
 
     private sortedLayers: (Vertex[])[] = [];
     rowRulesets: RowRules[] = [];
+    usedStitches = new Map<string, {stitch: StitchType, modifier: Modifier}>;
 
     constructor(startLayout?: 0 | 1) {
         if(!startLayout){
@@ -28,6 +29,7 @@ export class Pattern {
             firstStitch.fz = 0;
             this.firstStitchID = firstStitch.id;
             this.addVertex(firstStitch);
+            this.usedStitches.set(firstStitch.type.type, {stitch: firstStitch.type, modifier: Modifier.NO});
         }
         else{
             const hole = this.startChain(12)!;
@@ -137,10 +139,15 @@ export class Pattern {
                 for(let k=0; k<r.produce.length; k++) {
                     const produce = r.produce[k];
                     let stitch: Vertex;
-                    if(produce.topology == "chain" && produce.parameters.size !== undefined)
+                    if(produce.topology == "chain" && produce.parameters.size !== undefined){
                         stitch = new Hole(currentPrev.id+String(this.currentRow)+String(k), this.currentRow, produce.parameters.size);
-                    else
+                    }
+                    else{
                         stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
+                        this.usedStitches.set(
+                            ((r.produce[k].modifier == Modifier.NO) ? stitch.type.type : r.produce[k].modifier?.applyToStitch(stitch.type) + ""), 
+                            {stitch: stitch.type, modifier: r.produce[k].modifier ?? Modifier.NO});
+                    }
                     this.addVertex(stitch);
 
                     // TODO: see if continue to skip chains etc or if check in next iter before rule application
@@ -238,6 +245,7 @@ export class Pattern {
             this.addEdge(after.id, hole.id, "surround")
             for(let i=0; i<hole.size; i++) {
                 const ch = new Vertex(hole.id+String(i), StitchTypes.CH, hole.layer);
+                this.usedStitches.set("ch", {stitch: ch.type, modifier: Modifier.NO});
                 this.addVertex(ch);
                 this.addEdge(ch.id, prev, "prev");
                 this.addEdge(ch.id, hole.id, "surround")

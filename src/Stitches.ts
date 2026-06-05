@@ -5,7 +5,7 @@ export type Stitch = "ss" | "sc" | "hdc" | "dc" | "tr" | "ch" | "hole" | "ring" 
 export class StitchType {
     type: Stitch = "ch";
     category: "ring" | "insert" | "terminal" | "support";
-    symbol?: {symbol: string, fill?: boolean, bar?: boolean, height: number};
+    symbol?: {symbol: string, fill?: boolean, bar?: boolean, height: number, name: {en: string, de: string}};
 
     constructor(type: Stitch) {
         this.type = type;
@@ -53,7 +53,7 @@ export const StitchTypes = {
 export class Modifier {
     private type: "p" | "l" | "" = "";
     private position: "f" | "b" = "f";
-    symbol: {symbol: string, height: number} = {symbol: "", height: 0};
+    symbol: {symbol: string, height: number, name: {en: string, de: string}} = {symbol: "", height: 0, name: {de: "", en: ""}};
 
 
     private constructor(type?: "p" | "l" | "", position?: "f" | "b") {

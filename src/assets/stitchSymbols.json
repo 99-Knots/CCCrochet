@@ -1,63 +1,119 @@
 {
     "ring": {
         "symbol": "M25 50 a25 25 0 1 0 50 0 a 25 25 0 1 0 -50 0",
-        "height": 0
+        "height": 0,
+        "name": {
+            "en": "Magic circle (or chain 2 and work into second chain from hook)",
+            "de": "Magischer Ring (oder 2 Luftmaschen und in zweite Masche arbeiten)"
+        }
     },
     "ch": {
         "symbol": "M25 50 a25 12.5 0 1 0 50 0 a 25 12.5 0 1 0 -50 0",
-        "height": 0
+        "height": 0,
+        "name": {
+            "en": "chain",
+            "de": "Luftmasche"
+        }
     },
     "ss": {
         "symbol": "M25 50 a25 12.5 0 1 0 50 0 a 25 12.5 0 1 0 -50 0",
         "fill": true,
-        "height": 0.5
+        "height": 0.5,
+        "name": {
+            "en": "slipstitch",
+            "de": "Kettmasche"
+        }
     },
     "sc": {
         "symbol": "M50 15 v70 M15 50 h70",
-        "height": 1
+        "height": 1,
+        "name": {
+            "en": "single crochet",
+            "de": "feste Masche"
+        }
     },
     "hdc": {
         "symbol": "M50 10 v80",
         "bar": true,
-        "height": 1.5
+        "height": 1.5,
+        "name": {
+            "en": "half double crochet",
+            "de": "halbes Stäbchen"
+        }
     },
     "dc": {
-        "symbol": "M50 10 v80 m-15 -50 l30 10",
+        "symbol": "M50 10 v80 m-25 -50 l50 10",
         "bar": true,
-        "height": 2
+        "height": 2,
+        "name": {
+            "en": "double crochet",
+            "de": "Stäbchen"
+        }
     },
     "tr": {
-        "symbol": "M50 10 v80 m-15 -47.5 l30 10 m-30 -20 l30 10",
+        "symbol": "M50 10 v80 m-25 -47.5 l50 10 m-50 -20 l50 10",
         "bar": true,
-        "height": 2.5
+        "height": 2.5,
+        "name": {
+            "en": "treble crochet",
+            "de": "DoppelStäbchen"
+        }
     },
     "dtr": {
-        "symbol": "M50 10 v80 m-15 -40 l30 10 m-30 -20 l30 10 m-30 -20 l30 10",
+        "symbol": "M50 10 v80 m-25 -40 l50 10 m-50 -20 l50 10 m-50 -20 l50 10",
         "bar": true,
-        "height": 3
+        "height": 3,
+        "name": {
+            "en": "double treble crochet",
+            "de": "DreifachStäbchen"
+        }
     },
     "rsc": {
         "symbol": "M50 15 v70 M15 50 h70 M25 10 q12.5 -10 25 0 t25 0",
-        "height": 1
+        "height": 1,
+        "name": {
+            "en": "crab stitch or reverse single crochet",
+            "de": "Krebsmasche"
+        }
     },
     "fl": {
         "symbol": "M25 89 q25 15 50 0",
-        "height": 0.2
+        "height": 0.2,
+        "name": {
+            "en": "front loop",
+            "de": "vorderes Maschenglied"
+        }
     },
     "bl": {
         "symbol": "M25 99 q25 -15 50 0",
-        "height": 0.2
+        "height": 0.2,
+        "name": {
+            "en": "back loop",
+            "de": "hinteres Maschenglied"
+        }
     },
     "fp": {
         "symbol": "M50 85 v5 a15 15 0 1 1 -15 15",
-        "height": 0
+        "height": 0,
+        "name": {
+            "en": "front post",
+            "de": "vordere Reliefmasche"
+        }
     },
     "bp": {
         "symbol": "M50 85 v5 a15 15 0 1 0 15 15",
-        "height": 0
+        "height": 0,
+        "name": {
+            "en": "back post",
+            "de": "hintere Reliefmasche"
+        }
     },
     "bar": {
-        "symbol": "M0 10 h100",
-        "height": 0
+        "symbol": "M15 10 h70",
+        "height": 0,
+        "name": {
+            "en": "",
+            "de": ""
+        }
     }
 }

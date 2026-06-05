@@ -3,9 +3,12 @@ import chartIcon from './assets/fpdc.svg?raw';
 import dnldIcon from './assets/dnld.svg?raw';
 import * as CG from './CrochetGraph.ts'
 import { GraphRenderer } from './rendering/render3D.ts';
-import { drawToSVG, svgNamespace } from './rendering/renderPattern.ts';
+import { drawToSVG, svgNamespace, drawSingleSymbol } from './rendering/renderPattern.ts';
 import * as random from './random.ts';
 import { Rule, createRuleset, breedRulesets, type RowRules, type PatternRules } from './ruleProcessing.ts'
+
+import { jsPDF } from 'jspdf';
+import 'svg2pdf.js';
 
 
 const overlay = document.getElementById("overlay");
@@ -180,12 +183,56 @@ function downloadSVG(svg: SVGSVGElement) {
     URL.revokeObjectURL(link.href);
 }
 
+async function createPDF(svg: SVGSVGElement, pattern: CG.Pattern) {
+    const doc = new jsPDF("portrait", "mm", "a4");
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const svgWidth = svg.viewBox.baseVal.width;
+    const svgHeight = svg.viewBox.baseVal.height;
+    const scale = (pageWidth- 2*margin) / svgWidth;
+    doc.setFontSize(40);
+    doc.text("Coral pattern", margin, margin);
+
+    const svgClone = svg.cloneNode(true) as SVGSVGElement;
+    const g = svgClone.querySelector("g");
+    if(g)
+        g.removeAttribute("transform");
+    await doc.svg(svgClone, {x: margin, y: 20, width: svgWidth*scale, height: svgHeight*scale});
+
+    let y = 20 + svgHeight*scale;
+    
+    doc.setFontSize(10);
+    const symbolSize = 8;
+    const symbols = Array.from(pattern.usedStitches.values());
+    for(const symbol of symbols) {
+        const svgElem = drawSingleSymbol(symbol.stitch, symbol.modifier);
+        const symWidth = svgElem.viewBox.baseVal.width;
+        const symHeight = svgElem.viewBox.baseVal.height;
+        const symScale = symbolSize/symHeight;
+        svgElem.setAttribute("preserveAspectRatio", "none");
+        await doc.svg(svgElem, {x: 20, y: y-symbolSize/2, width: symWidth*symScale, height: symHeight*symScale});
+        const name = symbol.stitch.symbol?.name.en;
+        if(name)
+            doc.text(": " + symbol.modifier.symbol.name.en + " " + name, 20+10, y);
+        y += symbolSize;
+        if(y + margin > pageHeight) {
+            doc.addPage();
+            y = margin;
+        }
+    }
+    doc.text("Stitches may appear stretched in the chart!\nThe blue line indicates the flow of the stitches.", 20, y);
+
+    doc.save("coralPattern.pdf");
+}
+
+
 function createSVG() {
     const svgElem = document.createElementNS(svgNamespace, "svg");
     svgElem.setAttribute("viewBox", "-50 -50 100 100");
     svgElem.setAttribute("fill", "none");
     //svgElem.setAttribute("stroke", "black");
-    svgElem.setAttribute("stroke-width", "5");
+    svgElem.setAttribute("stroke-width", "2");
     return svgElem;
 }
 
@@ -207,6 +254,7 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     chart.classList.add("hidden");
 
     const svgElem = createSVG();
+    drawToSVG(svgElem, pattern.force2D(), pattern.edges);
     chart.appendChild(svgElem);
     card.appendChild(chart);
 
@@ -227,7 +275,8 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     const dlBtn = document.createElement("button");
     dlBtn.innerHTML = `${dnldIcon}`;
     dlBtn.addEventListener("click", () => {
-        downloadSVG(svgElem);
+        //downloadSVG(svgElem);
+        createPDF(svgElem, pattern);
     });
     dlBtn.setAttribute("data-i18n", "download");
 
@@ -255,7 +304,6 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
     if(color)
         scene.renderYarnColor = color;
     scene.modelGraph({nodes: pattern.force3D(), edges: pattern.edges});
-    drawToSVG(svgElem, pattern.force2D(), pattern.edges);
 
     return scene;
 }
