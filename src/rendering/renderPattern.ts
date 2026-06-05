@@ -91,8 +91,8 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
     const layerLines = document.createElementNS(svgNamespace, "g");
     layerLines.classList.add("layer-lines");
     
-    g.appendChild(stitches);
     g.appendChild(layerLines);
+    g.appendChild(stitches);
 
     svg.appendChild(g);
 

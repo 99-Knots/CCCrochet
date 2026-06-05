@@ -29,7 +29,7 @@ export class Pattern {
             firstStitch.fz = 0;
             this.firstStitchID = firstStitch.id;
             this.addVertex(firstStitch);
-            this.usedStitches.set(firstStitch.type.type, {stitch: firstStitch.type, modifier: Modifier.NO});
+            this.usedStitches.set(firstStitch.type.toString(), {stitch: firstStitch.type, modifier: Modifier.NO});
         }
         else{
             const hole = this.startChain(12)!;
@@ -145,7 +145,7 @@ export class Pattern {
                     else{
                         stitch = new Vertex(currentPrev.id+String(this.currentRow)+String(k), new StitchType(r.produce[k].type as Stitch), this.currentRow);
                         this.usedStitches.set(
-                            ((r.produce[k].modifier == Modifier.NO) ? stitch.type.type : r.produce[k].modifier?.applyToStitch(stitch.type) + ""), 
+                            ((r.produce[k].modifier == Modifier.NO || !r.produce[k].modifier) ? stitch.type.toString() : r.produce[k].modifier?.applyToStitch(stitch.type) + ""), 
                             {stitch: stitch.type, modifier: r.produce[k].modifier ?? Modifier.NO});
                     }
                     this.addVertex(stitch);

@@ -35,6 +35,10 @@ export class StitchType {
         if(this.type in stitchSymbols)
             this.symbol = (stitchSymbols as any)[this.type];
     }
+
+    toString() {
+        return this.type as string;
+    }
 }
 
 export const StitchTypes = {
@@ -67,14 +71,18 @@ export class Modifier {
     }
 
     applyToStitch(stitch: StitchType) {
+        let stitchString = stitch.toString();
         switch(this.type) {
             case "p":
-                return this.position + this.type + stitch;
+                stitchString = this.position + this.type + stitch;
+                break;
             case "l":
-                return stitch + this.position + this.type;
+                stitchString = stitch + this.position + this.type;
+                break;
             default:
-                return stitch;
+                break;
         }
+        return stitchString;
     }
 
     static readonly BL = new Modifier("l", "b");
