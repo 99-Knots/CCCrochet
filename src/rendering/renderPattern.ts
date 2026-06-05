@@ -1,7 +1,7 @@
 import stitchSymbols from "../assets/stitchSymbols.json"
 import { Edge, Vertex } from "../Stitches";
 import { select } from 'd3-selection';
-import { zoom } from 'd3-zoom';
+import { zoom, zoomIdentity } from 'd3-zoom';
 
 
 export const svgNamespace = "http://www.w3.org/2000/svg";
@@ -14,6 +14,9 @@ export function setupZoom(svgElement: SVGSVGElement, contentGroup: SVGGElement) 
             contentGroup.setAttribute('transform', event.transform.toString());
         });
     select(svgElement).call(zoomBehavior);
+    const initialTransform = zoomIdentity.translate(0, -10).scale(0.3);
+    select(svgElement).call(zoomBehavior.transform, initialTransform);
+
 }
 
 function drawSymbol(vertex: Vertex,
@@ -30,6 +33,7 @@ function drawSymbol(vertex: Vertex,
         //console.log(vertex.type)
         path.setAttribute("fill", symbol.fill ? "#000" : "none");
         path.setAttribute("stroke", (vertex.layer % 2 == 1) ? "#000": "#666");
+        path.setAttribute("vector-effect", "non-scaling-stroke");
         
         const scale = distance / 100;
 
@@ -93,6 +97,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angleAvg}) scale(0.05, ${scaleAvg}) translate(-50, -5)`;
                 bar.setAttribute("transform", transform);
                 bar.setAttribute("stroke", (v.layer % 2 == 1) ? "#000": "#666");
+                bar.setAttribute("vector-effect", "non-scaling-stroke");
                 stitches.appendChild(bar);
             }
         }
@@ -117,6 +122,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 const transform = `translate(${(v.x ?? 0)}, ${v.y ?? 0}) rotate(${angle}) scale(${1/10})  translate(-50, -50)`;
                 path.setAttribute("transform", transform);
                 path.setAttribute("stroke", (v.layer % 2 == 1) ? "#000": "#666");
+                path.setAttribute("vector-effect", "non-scaling-stroke");
                 stitches.appendChild(path)
             }
         }
@@ -133,6 +139,7 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
                 path.setAttribute("y2", `${e.target.y ?? 0}`);
                 path.setAttribute("stroke-width", "1");
                 path.setAttribute("stroke", "blue");
+                path.setAttribute("vector-effect", "non-scaling-stroke");
                 layerLines.appendChild(path)
             }
         });
@@ -147,9 +154,14 @@ export function drawToSVG(svg: SVGSVGElement, vertices: Vertex[], edges: Edge[])
             path.setAttribute("y2", `${prev.target.y ?? 0}`);
             path.setAttribute("stroke-width", "1");
             path.setAttribute("stroke", "blue");
+            path.setAttribute("vector-effect", "non-scaling-stroke");
             layerLines.appendChild(path)
         }
     });
+
+    const bBox = svg.getBBox();
+    const padding = 20;
+    svg.setAttribute("viewbox", `${bBox.x - padding} ${bBox.y - padding} ${bBox.width + padding*2} ${bBox.height + padding*2}`)
     setupZoom(svg, g);
 }
         

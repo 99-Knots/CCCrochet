@@ -168,6 +168,18 @@ function copySVG(svg: SVGSVGElement) {
     });
 }
 
+function downloadSVG(svg: SVGSVGElement) {
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svg);
+
+    const blob = new Blob([svgString], {type: "text/plain"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "Coral-Pattern.svg";
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
 function createSVG() {
     const svgElem = document.createElementNS(svgNamespace, "svg");
     svgElem.setAttribute("viewBox", "-50 -50 100 100");
@@ -214,6 +226,9 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
 
     const dlBtn = document.createElement("button");
     dlBtn.innerHTML = `${dnldIcon}`;
+    dlBtn.addEventListener("click", () => {
+        downloadSVG(svgElem);
+    });
     dlBtn.setAttribute("data-i18n", "download");
 
 
