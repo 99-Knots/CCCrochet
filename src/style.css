@@ -411,3 +411,51 @@ button {
         gap: 3rem;
     }
 }
+
+.switch { 
+    position: relative; 
+    display: inline-block;
+} 
+
+#handToggle { 
+    display: none;
+    width: 0; 
+    height: 0; 
+} 
+
+.slider {
+    cursor: pointer; 
+    display: flex;
+    position: relative;
+    width: 3rem;
+    background-color: color-mix(in srgb, var(--sand-color) 100%, var(--dark-color) 50%);
+    border: var(--dark-color) solid 1px;
+    transition: 0.3s;
+    border-radius: 0.5rem;
+}
+
+.slider-label {
+    z-index: 20;
+    height: 100%;
+    color: #ffffff;
+    font-family: var(--main-font);
+    font-size: 1rem;
+    flex: 1;
+    padding: 0.3rem;
+    text-align: center;
+}
+
+.slider:before { 
+    position: absolute; 
+    content: ""; 
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    background-color: var(--dark-color); 
+    transition: 0.3s; 
+    border-radius: 0.5rem;
+} 
+
+input:checked + .slider:before { 
+    transform: translateX(100%); 
+}

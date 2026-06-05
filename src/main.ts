@@ -14,6 +14,7 @@ import 'svg2pdf.js';
 const overlay = document.getElementById("overlay");
 const canvas = document.getElementById("canvas")!;
 const contBtn = document.getElementById("cont-btn") as HTMLButtonElement;
+const handToggle = document.getElementById("handToggle") as HTMLInputElement;
 
 const renderer = createRenderer(canvas);
 const coralPalettes = ["#ea7070", "#7ae7c7", "#4dbedf", "#e59572", "#fbe050", "#8a75c6"];
@@ -22,8 +23,9 @@ let numRows = 5;
 let numSamples = 6;
 let generation = 0;
 
-let patternList: {pattern: CG.Pattern, selected: boolean}[] = [];
+let patternList: {pattern: CG.Pattern, selected: boolean, svg: SVGSVGElement}[] = [];
 let shownTutorial = false;
+let isRighthanded = handToggle.checked;
 
 
 function showOverlay() {
@@ -98,6 +100,15 @@ async function doGeneration() {
     generation++;
 }
 
+function adjustChartsToHandedness() {
+    for(const pattern of patternList) {
+        if(isRighthanded)
+            pattern.svg.setAttribute("transform", "scale(-1, 1)")
+        else
+            pattern.svg.setAttribute("transform", "scale(1, 1)")
+    }
+}
+
 function generatePattern(rowRulesets: Rule[][]) {
     const pat = new CG.Pattern();
     //let h = pat.startChain(5);
@@ -136,14 +147,16 @@ async function geneticGeneration(gen: number = 0) {
             const pat = generatePattern(rowRuleset);
             const color = coralPalettes[k % coralPalettes.length];
             const rend = await renderPattern(pat, renderer, k, color);
-            patternList.push({pattern: pat, selected: false});
+            patternList.push({pattern: pat, selected: false, svg: rend.svg});
         }
     }
     else {
         const children: PatternRules[] = [];
         for(let k=0; k<numSamples; k++) {
             const parents = oldPatternList.map( p => p.pattern.rowRulesets );
-            const fitness = oldPatternList.map( p => p.selected ? 0.9 : 0.1);
+            const numSelected = oldPatternList.flatMap( p => p.selected ? [true] : []).length;
+            const numUnselected = numSamples - numSelected;
+            const fitness = oldPatternList.map( p => p.selected ? 0.9/numSelected : numUnselected ? 0.1/numUnselected : 0);
             const matingPool = createMatingPool(parents, fitness);
             children.push(breedRulesets(matingPool, numRows));
         }
@@ -152,7 +165,7 @@ async function geneticGeneration(gen: number = 0) {
             // Choose a color based on the card's index so they cycle beautifully
             const color = coralPalettes[i % coralPalettes.length];
             const rend = await renderPattern(pat, renderer, i, color);
-            patternList.push({pattern: pat, selected: false});
+            patternList.push({pattern: pat, selected: false, svg: rend.svg});
         }
     }
 }
@@ -198,7 +211,8 @@ async function createPDF(svg: SVGSVGElement, pattern: CG.Pattern) {
     const g = svgClone.querySelector("g");
     if(g)
         g.removeAttribute("transform");
-    await doc.svg(svgClone, {x: margin, y: 20, width: svgWidth*scale, height: svgHeight*scale});
+    const flipOffset = isRighthanded ? svgWidth*scale : 0;
+    await doc.svg(svgClone, {x: margin + flipOffset, y: 20, width: svgWidth*scale, height: svgHeight*scale});
 
     let y = 20 + svgHeight*scale;
     
@@ -305,7 +319,7 @@ async function renderPattern(pattern: CG.Pattern, renderer: GraphRenderer, index
         scene.renderYarnColor = color;
     scene.modelGraph({nodes: pattern.force3D(), edges: pattern.edges});
 
-    return scene;
+    return {scene: scene, svg: svgElem};
 }
 
 window.addEventListener("resize", () => {
@@ -324,6 +338,10 @@ document.getElementById("gen-btn")?.addEventListener("click", (async () => {
 }));
 
 contBtn?.addEventListener("click", hideOverlay);
+handToggle.addEventListener("change", () => {
+    isRighthanded = handToggle.checked;
+    adjustChartsToHandedness();
+})
 
 window.addEventListener("load", async () => {  
     console.log("loading")
@@ -332,4 +350,5 @@ window.addEventListener("load", async () => {
     await doGeneration().then(
         () => console.log("generated")
     );
+    adjustChartsToHandedness();
 });
