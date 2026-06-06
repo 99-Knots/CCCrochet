@@ -570,7 +570,8 @@ export function breedRulesets(parentGen: {ruleset: PatternRules, usages: number[
     for(const parent of parentGen) {
         for(let k=0; k<parent.ruleset.length; k++) {
             for(let l=0; l<parent.ruleset[k].length; l++) {
-                parent.ruleset[k][l].weight = parent.usages[k][l] + 1;  // to ensure no hidden genes
+                // take actual usage into account for next gen
+                parent.ruleset[k][l].weight = Math.ceil((parent.ruleset[k][l].weight + parent.usages[k][l]) / 2);
             }
         }
     }
